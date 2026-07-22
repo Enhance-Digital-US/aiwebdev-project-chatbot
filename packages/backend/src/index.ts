@@ -1,7 +1,13 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { convertToModelMessages, streamText } from "ai";
+import {
+  convertToModelMessages,
+  createUIMessageStreamResponse,
+  streamText,
+  toUIMessageStream,
+} from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOllama } from "ollama-ai-provider-v2";
 
 type Bindings = {
   OPENAI_API_KEY: string;
@@ -28,7 +34,28 @@ app.post("/api/chat", async (c) => {
     messages: await convertToModelMessages(messages),
   });
 
-  return result.toUIMessageStreamResponse();
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({ stream: result.stream }),
+  });
+});
+
+app.post("/api/ollama-chat", async (c) => {
+  const ollama = createOllama({ baseURL: "http://localhost:11434/api" });
+  const { messages } = await c.req.json();
+
+  const result = streamText({
+    model: ollama("gemma4:12b"),
+    system: "You are a helpful assistant.",
+    messages: await convertToModelMessages(messages),
+    providerOptions: { ollama: { think: true } },
+  });
+
+  return createUIMessageStreamResponse({
+    stream: toUIMessageStream({
+      stream: result.stream,
+      sendReasoning: true,
+    }),
+  });
 });
 
 export default app;

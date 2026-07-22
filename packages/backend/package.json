@@ -9,7 +9,8 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.16",
     "ai": "^7.0.32",
-    "hono": "^4.12.31"
+    "hono": "^4.12.31",
+    "ollama-ai-provider-v2": "^4.0.1"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260721.1",
