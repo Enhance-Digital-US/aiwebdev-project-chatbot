@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
 import {
@@ -18,7 +19,11 @@ import {
   PromptInputTextarea,
 } from "@/components/ai-elements/prompt-input";
 
-export default function App() {
+export const Route = createFileRoute("/openai-chat")({
+  component: OpenAIChat,
+});
+
+function OpenAIChat() {
   const { messages, sendMessage, status } = useChat({
     transport: new DefaultChatTransport({
       api: "/api/chat",
@@ -30,11 +35,7 @@ export default function App() {
   };
 
   return (
-    <div className="h-screen flex flex-col">
-      <header className="border-b px-4 py-3">
-        <h1 className="text-lg font-semibold">Chatbot</h1>
-      </header>
-
+    <div className="flex-1 flex flex-col">
       <Conversation className="flex-1">
         <ConversationContent>
           {messages.map((message) => (
