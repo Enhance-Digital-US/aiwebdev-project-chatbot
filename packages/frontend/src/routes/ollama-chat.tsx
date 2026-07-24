@@ -51,7 +51,7 @@ function OllamaChat() {
                     return (
                       <Reasoning
                         key={i}
-                        isStreaming={status === "streaming"}
+                        isStreaming={part.state === "streaming"}
                       >
                         <ReasoningTrigger />
                         <ReasoningContent>{part.text}</ReasoningContent>

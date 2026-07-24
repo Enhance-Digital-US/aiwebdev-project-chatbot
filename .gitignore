@@ -4,4 +4,3 @@ dist
 .dev.vars
 *.local
 *.tsbuildinfo
-routeTree.gen.ts
