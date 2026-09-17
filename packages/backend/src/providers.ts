@@ -7,6 +7,7 @@ export type ModelConfig = {
   createModel: (env: AppEnv["Bindings"]) => LanguageModel;
   providerOptions?: Record<string, Record<string, unknown>>;
   sendReasoning?: boolean;
+  supportsTools?: boolean;
   telemetryId: string;
 };
 
