@@ -37,6 +37,14 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
+import type { ToolUIPart } from "ai";
+import {
+  Tool as ToolDisplay,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
 
 const models = [
   { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" as const },
@@ -85,6 +93,39 @@ function ChatPage() {
                   if (part.type === "text") {
                     return (
                       <MessageResponse key={i}>{part.text}</MessageResponse>
+                    );
+                  }
+                  if (part.type.startsWith("tool-")) {
+                    const toolPart = part as ToolUIPart;
+                    return (
+                      <ToolDisplay
+                        key={i}
+                        defaultOpen={
+                          toolPart.state === "output-available" ||
+                          toolPart.state === "output-error"
+                        }
+                      >
+                        <ToolHeader type={toolPart.type} state={toolPart.state} />
+                        <ToolContent>
+                          <ToolInput input={toolPart.input} />
+                          <ToolOutput
+                            output={
+                              toolPart.state === "output-available" ? (
+                                <MessageResponse>
+                                  {typeof toolPart.output === "string"
+                                    ? toolPart.output
+                                    : JSON.stringify(toolPart.output, null, 2)}
+                                </MessageResponse>
+                              ) : undefined
+                            }
+                            errorText={
+                              toolPart.state === "output-error"
+                                ? toolPart.errorText
+                                : undefined
+                            }
+                          />
+                        </ToolContent>
+                      </ToolDisplay>
                     );
                   }
                   return null;
