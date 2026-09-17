@@ -1,7 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport } from "ai";
-import { useState } from "react";
 import {
   Conversation,
   ConversationContent,
@@ -38,6 +37,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import type { ToolUIPart } from "ai";
+import { useEffect, useState } from "react";
 import {
   Tool as ToolDisplay,
   ToolContent,
@@ -50,6 +50,28 @@ const models = [
   { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" as const },
   { id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const },
 ];
+
+function ToolInvocation({ part }: { part: ToolUIPart }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (part.state === "output-available" || part.state === "output-error") {
+      setOpen(true);
+    }
+  }, [part.state]);
+
+  return (
+    <ToolDisplay open={open} onOpenChange={setOpen}>
+      <ToolHeader type={part.type} state={part.state} />
+      <ToolContent>
+        <ToolInput input={part.input} />
+        <ToolOutput
+          output={part.state === "output-available" ? part.output : undefined}
+          errorText={part.state === "output-error" ? part.errorText : undefined}
+        />
+      </ToolContent>
+    </ToolDisplay>
+  );
+}
 
 export const Route = createFileRoute("/")({
   component: ChatPage,
@@ -96,36 +118,8 @@ function ChatPage() {
                     );
                   }
                   if (part.type.startsWith("tool-")) {
-                    const toolPart = part as ToolUIPart;
                     return (
-                      <ToolDisplay
-                        key={i}
-                        defaultOpen={
-                          toolPart.state === "output-available" ||
-                          toolPart.state === "output-error"
-                        }
-                      >
-                        <ToolHeader type={toolPart.type} state={toolPart.state} />
-                        <ToolContent>
-                          <ToolInput input={toolPart.input} />
-                          <ToolOutput
-                            output={
-                              toolPart.state === "output-available" ? (
-                                <MessageResponse>
-                                  {typeof toolPart.output === "string"
-                                    ? toolPart.output
-                                    : JSON.stringify(toolPart.output, null, 2)}
-                                </MessageResponse>
-                              ) : undefined
-                            }
-                            errorText={
-                              toolPart.state === "output-error"
-                                ? toolPart.errorText
-                                : undefined
-                            }
-                          />
-                        </ToolContent>
-                      </ToolDisplay>
+                      <ToolInvocation key={i} part={part as ToolUIPart} />
                     );
                   }
                   return null;
