@@ -16,10 +16,10 @@ importers:
     dependencies:
       '@ai-sdk/openai':
         specifier: ^4.0.16
-        version: 4.0.16(zod@4.4.3)
+        version: 4.0.16(zod@4.6.5)
       '@ai-sdk/otel':
         specifier: ^1.0.105
-        version: 1.0.105(zod@4.4.3)
+        version: 1.0.105(zod@4.6.5)
       '@opentelemetry/api':
         specifier: ^1.9.1
         version: 1.9.1
@@ -37,13 +37,16 @@ importers:
         version: 2.11.0(@opentelemetry/api@1.9.1)
       ai:
         specifier: ^7.0.32
-        version: 7.0.32(zod@4.4.3)
+        version: 7.0.32(zod@4.6.5)
       hono:
         specifier: ^4.12.31
         version: 4.12.31
       ollama-ai-provider-v2:
         specifier: ^4.0.1
-        version: 4.0.1(ai@7.0.32(zod@4.4.3))(zod@4.4.3)
+        version: 4.0.1(ai@7.0.32(zod@4.6.5))(zod@4.6.5)
+      zod:
+        specifier: ^4.6.5
+        version: 4.6.5
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260721.1
@@ -59,7 +62,7 @@ importers:
     dependencies:
       '@ai-sdk/react':
         specifier: ^4.0.35
-        version: 4.0.35(react@19.2.7)(zod@4.4.3)
+        version: 4.0.35(react@19.2.7)(zod@4.6.5)
       '@radix-ui/react-collapsible':
         specifier: ^1.1.17
         version: 1.1.17(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
@@ -104,7 +107,7 @@ importers:
         version: 1.170.18(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
       ai:
         specifier: ^7.0.32
-        version: 7.0.32(zod@4.4.3)
+        version: 7.0.32(zod@4.6.5)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3175,62 +3178,65 @@ packages:
   zod@4.4.3:
     resolution: {integrity: sha512-ytENFjIJFl2UwYglde2jchW2Hwm4GJFLDiSXWdTrJQBIN9Fcyp7n4DhxJEiWNAJMV1/BqWfW/kkg71UDcHJyTQ==}
 
+  zod@4.6.5:
+    resolution: {integrity: sha512-v5l/aFXZQeai4awLbOpSoHecE9UiMrnfx75tEXLjNonXVARxQ5mOeipTjROUchszUNCqnE+hqAMujRsRHsut2Q==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
 snapshots:
 
-  '@ai-sdk/gateway@4.0.24(zod@4.4.3)':
+  '@ai-sdk/gateway@4.0.24(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
       '@vercel/oidc': 3.2.0
-      zod: 4.4.3
+      zod: 4.6.5
 
-  '@ai-sdk/gateway@4.0.85(zod@4.4.3)':
+  '@ai-sdk/gateway@4.0.85(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.17
-      '@ai-sdk/provider-utils': 5.0.43(zod@4.4.3)
+      '@ai-sdk/provider-utils': 5.0.43(zod@4.6.5)
       '@vercel/oidc': 3.2.0
-      zod: 4.4.3
+      zod: 4.6.5
 
-  '@ai-sdk/mcp@2.0.15(zod@4.4.3)':
+  '@ai-sdk/mcp@2.0.15(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
       pkce-challenge: 5.0.1
-      zod: 4.4.3
+      zod: 4.6.5
 
-  '@ai-sdk/openai@4.0.16(zod@4.4.3)':
+  '@ai-sdk/openai@4.0.16(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
-      zod: 4.4.3
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
+      zod: 4.6.5
 
-  '@ai-sdk/otel@1.0.105(zod@4.4.3)':
+  '@ai-sdk/otel@1.0.105(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.17
       '@opentelemetry/api': 1.9.1
-      ai: 7.0.105(zod@4.4.3)
+      ai: 7.0.105(zod@4.6.5)
     transitivePeerDependencies:
       - zod
 
-  '@ai-sdk/provider-utils@5.0.11(zod@4.4.3)':
+  '@ai-sdk/provider-utils@5.0.11(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.3
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.0
-      zod: 4.4.3
+      zod: 4.6.5
 
-  '@ai-sdk/provider-utils@5.0.43(zod@4.4.3)':
+  '@ai-sdk/provider-utils@5.0.43(zod@4.6.5)':
     dependencies:
       '@ai-sdk/provider': 4.0.17
       '@standard-schema/spec': 1.1.0
       '@workflow/serde': 4.1.0
       eventsource-parser: 3.1.0
       undici: 7.29.1
-      zod: 4.4.3
+      zod: 4.6.5
 
   '@ai-sdk/provider@4.0.17':
     dependencies:
@@ -3240,12 +3246,12 @@ snapshots:
     dependencies:
       json-schema: 0.4.0
 
-  '@ai-sdk/react@4.0.35(react@19.2.7)(zod@4.4.3)':
+  '@ai-sdk/react@4.0.35(react@19.2.7)(zod@4.6.5)':
     dependencies:
-      '@ai-sdk/mcp': 2.0.15(zod@4.4.3)
+      '@ai-sdk/mcp': 2.0.15(zod@4.6.5)
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
-      ai: 7.0.32(zod@4.4.3)
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
+      ai: 7.0.32(zod@4.6.5)
       react: 19.2.7
       swr: 2.4.2(react@19.2.7)
       throttleit: 2.1.0
@@ -4601,19 +4607,19 @@ snapshots:
 
   '@workflow/serde@4.1.0': {}
 
-  ai@7.0.105(zod@4.4.3):
+  ai@7.0.105(zod@4.6.5):
     dependencies:
-      '@ai-sdk/gateway': 4.0.85(zod@4.4.3)
+      '@ai-sdk/gateway': 4.0.85(zod@4.6.5)
       '@ai-sdk/provider': 4.0.17
-      '@ai-sdk/provider-utils': 5.0.43(zod@4.4.3)
-      zod: 4.4.3
+      '@ai-sdk/provider-utils': 5.0.43(zod@4.6.5)
+      zod: 4.6.5
 
-  ai@7.0.32(zod@4.4.3):
+  ai@7.0.32(zod@4.6.5):
     dependencies:
-      '@ai-sdk/gateway': 4.0.24(zod@4.4.3)
+      '@ai-sdk/gateway': 4.0.24(zod@4.6.5)
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
-      zod: 4.4.3
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
+      zod: 4.6.5
 
   ansi-regex@6.2.2: {}
 
@@ -5796,12 +5802,12 @@ snapshots:
 
   node-releases@2.0.51: {}
 
-  ollama-ai-provider-v2@4.0.1(ai@7.0.32(zod@4.4.3))(zod@4.4.3):
+  ollama-ai-provider-v2@4.0.1(ai@7.0.32(zod@4.6.5))(zod@4.6.5):
     dependencies:
       '@ai-sdk/provider': 4.0.3
-      '@ai-sdk/provider-utils': 5.0.11(zod@4.4.3)
-      ai: 7.0.32(zod@4.4.3)
-      zod: 4.4.3
+      '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
+      ai: 7.0.32(zod@4.6.5)
+      zod: 4.6.5
 
   oniguruma-parser@0.12.2: {}
 
@@ -6385,5 +6391,7 @@ snapshots:
       youch-core: 0.3.3
 
   zod@4.4.3: {}
+
+  zod@4.6.5: {}
 
   zwitch@2.0.4: {}
