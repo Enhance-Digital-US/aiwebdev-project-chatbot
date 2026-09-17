@@ -10,53 +10,33 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as OllamaChatRouteImport } from './routes/ollama-chat'
-import { Route as OpenaiChatRouteImport } from './routes/openai-chat'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OllamaChatRoute = OllamaChatRouteImport.update({
-  id: '/ollama-chat',
-  path: '/ollama-chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OpenaiChatRoute = OpenaiChatRouteImport.update({
-  id: '/openai-chat',
-  path: '/openai-chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/ollama-chat': typeof OllamaChatRoute
-  '/openai-chat': typeof OpenaiChatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/ollama-chat': typeof OllamaChatRoute
-  '/openai-chat': typeof OpenaiChatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/ollama-chat': typeof OllamaChatRoute
-  '/openai-chat': typeof OpenaiChatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/ollama-chat' | '/openai-chat'
+  fullPaths: '/'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/ollama-chat' | '/openai-chat'
-  id: '__root__' | '/' | '/ollama-chat' | '/openai-chat'
+  to: '/'
+  id: '__root__' | '/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  OllamaChatRoute: typeof OllamaChatRoute
-  OpenaiChatRoute: typeof OpenaiChatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -68,27 +48,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/ollama-chat': {
-      id: '/ollama-chat'
-      path: '/ollama-chat'
-      fullPath: '/ollama-chat'
-      preLoaderRoute: typeof OllamaChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/openai-chat': {
-      id: '/openai-chat'
-      path: '/openai-chat'
-      fullPath: '/openai-chat'
-      preLoaderRoute: typeof OpenaiChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  OllamaChatRoute: OllamaChatRoute,
-  OpenaiChatRoute: OpenaiChatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
