@@ -57,8 +57,12 @@ Demo entries (public, unauthenticated, read-only):
 ### Shared seam (`types.ts`)
 
 ```ts
-type McpToolLoader = (servers: McpServerConfig[]) =>
-  Promise<{ tools: ToolSet; close: () => Promise<void> }>;
+interface McpConnection {
+  tools: ToolSet;
+  close: () => Promise<void>;
+}
+/** Connects to ONE server; the orchestrator owns parallelism and namespacing. */
+type McpToolLoader = (server: McpServerConfig) => Promise<McpConnection>;
 ```
 
 Both loaders satisfy this signature. `chat.ts` never knows which is active.
@@ -121,7 +125,9 @@ Principle: **a broken connector never breaks the chat.**
 - Per-server connect/list failures are isolated (`Promise.allSettled`), logged
   (visible in `wrangler tail` / OTel traces), and skipped. All-servers-down
   degrades to today's local-tools-only behavior.
-- Per-server connect + `tools/list` timeout: `AbortSignal.timeout(5000)`.
+- Per-server connect + `tools/list` timeout: 5s, race-based (`Promise.race`
+  against a timer); the losing attempt is abandoned, which is acceptable in a
+  request-scoped Worker.
 - Mid-conversation `tools/call` failures throw descriptive errors from
   `execute`; the AI SDK surfaces them to the model as tool-error results so it
   can recover in-conversation. The raw loader matches this behavior.
