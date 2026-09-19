@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      '@ai-sdk/mcp':
+        specifier: ^2.0.54
+        version: 2.0.54(zod@4.6.5)
     devDependencies:
       concurrently:
         specifier: ^10.0.3
