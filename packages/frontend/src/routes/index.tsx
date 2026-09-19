@@ -36,7 +36,7 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
-import type { ToolUIPart } from "ai";
+import type { ToolPart } from "@/components/ai-elements/tool";
 import { useEffect, useState } from "react";
 import {
   Tool as ToolDisplay,
@@ -51,7 +51,7 @@ const models = [
   { id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const },
 ];
 
-function ToolInvocation({ part }: { part: ToolUIPart }) {
+function ToolInvocation({ part }: { part: ToolPart }) {
   const [open, setOpen] = useState(false);
   useEffect(() => {
     if (part.state === "output-available" || part.state === "output-error") {
@@ -61,7 +61,11 @@ function ToolInvocation({ part }: { part: ToolUIPart }) {
 
   return (
     <ToolDisplay open={open} onOpenChange={setOpen}>
-      <ToolHeader type={part.type} state={part.state} />
+      {part.type === "dynamic-tool" ? (
+        <ToolHeader type={part.type} state={part.state} toolName={part.toolName} />
+      ) : (
+        <ToolHeader type={part.type} state={part.state} />
+      )}
       <ToolContent>
         <ToolInput input={part.input} />
         <ToolOutput
@@ -117,9 +121,9 @@ function ChatPage() {
                       <MessageResponse key={i}>{part.text}</MessageResponse>
                     );
                   }
-                  if (part.type.startsWith("tool-")) {
+                  if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                     return (
-                      <ToolInvocation key={i} part={part as ToolUIPart} />
+                      <ToolInvocation key={i} part={part as ToolPart} />
                     );
                   }
                   return null;
