@@ -9,7 +9,7 @@ import {
 } from "ai";
 import type { AppEnv } from "../types";
 import { getModel } from "../providers";
-import { tools } from "../tools";
+import { tools, createExecuteCodeTool } from "../tools";
 import { loadMcpTools } from "../mcp";
 import { loadSkill, buildSkillsPrompt } from "../skills";
 import { flushTelemetry } from "../telemetry";
@@ -39,7 +39,7 @@ chat.post("/chat", async (c) => {
     messages: await convertToModelMessages(messages),
     providerOptions: config.providerOptions,
     ...(supportsTools && {
-      tools: { ...tools, ...mcpTools, loadSkill },
+      tools: { ...tools, ...mcpTools, loadSkill, executeCode: createExecuteCodeTool(c.env) },
       stopWhen: isStepCount(5),
     }),
     telemetry: { functionId: config.telemetryId },
