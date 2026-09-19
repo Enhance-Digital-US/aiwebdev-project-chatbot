@@ -40,6 +40,12 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import type { ToolPart } from "@/components/ai-elements/tool";
+import {
+  Sandbox,
+  SandboxContent,
+  SandboxHeader,
+  SandboxTabs,
+} from "@/components/ai-elements/sandbox";
 import { MessageSquareIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
@@ -130,6 +136,34 @@ function ChatPage() {
                     if (part.type === "text") {
                       return (
                         <MessageResponse key={i}>{part.text}</MessageResponse>
+                      );
+                    }
+                    if (part.type === "tool-executeCode") {
+                      const input = (part.input ?? {}) as {
+                        code?: string;
+                        language?: string;
+                      };
+                      const output = part.state === "output-available"
+                        ? (part.output as {
+                            stdout?: string;
+                            stderr?: string;
+                          })
+                        : undefined;
+                      return (
+                        <Sandbox key={i}>
+                          <SandboxHeader
+                            title={input.language === "python" ? "Python" : "JavaScript"}
+                            state={part.state as "input-streaming" | "input-available" | "output-available" | "output-error"}
+                          />
+                          <SandboxContent>
+                            <SandboxTabs
+                              code={input.code ?? ""}
+                              language={input.language ?? "javascript"}
+                              output={output?.stdout}
+                              stderr={output?.stderr}
+                            />
+                          </SandboxContent>
+                        </Sandbox>
                       );
                     }
                     if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
