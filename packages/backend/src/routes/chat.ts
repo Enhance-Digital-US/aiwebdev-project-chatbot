@@ -11,6 +11,7 @@ import type { AppEnv } from "../types";
 import { getModel } from "../providers";
 import { tools } from "../tools";
 import { loadMcpTools } from "../mcp";
+import { loadSkill, buildSkillsPrompt } from "../skills";
 import { flushTelemetry } from "../telemetry";
 
 const chat = new Hono<AppEnv>();
@@ -30,13 +31,15 @@ chat.post("/chat", async (c) => {
     }
   }
 
+  const skillsPrompt = buildSkillsPrompt();
+
   const result = streamText({
     model: config.createModel(c.env),
-    system: "You are a helpful assistant.",
+    system: `You are a helpful assistant.\n\n${skillsPrompt}`,
     messages: await convertToModelMessages(messages),
     providerOptions: config.providerOptions,
     ...(supportsTools && {
-      tools: { ...tools, ...mcpTools },
+      tools: { ...tools, ...mcpTools, loadSkill },
       stopWhen: isStepCount(5),
     }),
     telemetry: { functionId: config.telemetryId },
