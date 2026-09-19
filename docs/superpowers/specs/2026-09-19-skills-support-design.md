@@ -178,9 +178,11 @@ This lets `import content from "./eli5-explainer/SKILL.md"` yield a string.
 
 ## Frontend
 
-**No changes required.** The `loadSkill` tool appears as a `dynamic-tool`
-part in the message stream, rendered by the existing `ToolInvocation`
-component. The UI shows:
+**No changes required.** The `loadSkill` tool is statically defined in the
+`tools` object, so it streams as a `tool-loadSkill` part (not `dynamic-tool`,
+which is for runtime-discovered MCP tools). The existing `ToolInvocation`
+component handles both via the `part.type.startsWith("tool-")` check. The UI
+shows:
 
 - Tool name: `loadSkill`
 - Parameters: `{"name": "eli5-explainer"}`
@@ -196,9 +198,6 @@ see the model deciding to load a skill and the instructions it receives.
 - **Malformed SKILL.md**: Parse errors during discovery are logged at build
   time. A skill with unparseable frontmatter or missing description is skipped
   with a warning.
-- **Empty catalog**: If no skills parse successfully, `buildSkillsPrompt()`
-  returns an empty string and `loadSkill` is not registered (no tool with zero
-  valid enum values).
 
 ## Verification (manual)
 
