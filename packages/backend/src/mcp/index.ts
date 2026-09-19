@@ -28,7 +28,7 @@ export async function loadMcpTools(
   env: AppEnv["Bindings"]
 ): Promise<{ tools: ToolSet; close: () => Promise<void> }> {
   const loader: McpToolLoader =
-    env.MCP_IMPL === "raw" ? rawLoader : aiSdkLoader;
+    env.MCP_IMPL === "ai-sdk" ? aiSdkLoader : rawLoader;
   const enabled = mcpServers.filter((server) => server.enabled);
 
   const results = await Promise.allSettled(
