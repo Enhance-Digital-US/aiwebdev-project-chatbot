@@ -4,6 +4,9 @@ import { DefaultChatTransport } from "ai";
 import {
   Conversation,
   ConversationContent,
+  ConversationDownload,
+  ConversationEmptyState,
+  ConversationScrollButton,
 } from "@/components/ai-elements/conversation";
 import {
   Message,
@@ -37,6 +40,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import type { ToolPart } from "@/components/ai-elements/tool";
+import { MessageSquareIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import {
   Tool as ToolDisplay,
@@ -101,37 +105,49 @@ function ChatPage() {
     <div className="flex-1 flex flex-col">
       <Conversation className="flex-1">
         <ConversationContent>
-          {messages.map((message) => (
-            <Message key={message.id} from={message.role}>
-              <MessageContent>
-                {message.parts.map((part, i) => {
-                  if (part.type === "reasoning") {
-                    return (
-                      <Reasoning
-                        key={i}
-                        isStreaming={part.state === "streaming"}
-                      >
-                        <ReasoningTrigger />
-                        <ReasoningContent>{part.text}</ReasoningContent>
-                      </Reasoning>
-                    );
-                  }
-                  if (part.type === "text") {
-                    return (
-                      <MessageResponse key={i}>{part.text}</MessageResponse>
-                    );
-                  }
-                  if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
-                    return (
-                      <ToolInvocation key={i} part={part as ToolPart} />
-                    );
-                  }
-                  return null;
-                })}
-              </MessageContent>
-            </Message>
-          ))}
+          {messages.length === 0 ? (
+            <ConversationEmptyState
+              title="What can I help you with?"
+              description="Ask me anything — I can search docs, explain concepts, and help you architect solutions."
+              icon={<MessageSquareIcon className="size-8" />}
+            />
+          ) : (
+            messages.map((message) => (
+              <Message key={message.id} from={message.role}>
+                <MessageContent>
+                  {message.parts.map((part, i) => {
+                    if (part.type === "reasoning") {
+                      return (
+                        <Reasoning
+                          key={i}
+                          isStreaming={part.state === "streaming"}
+                        >
+                          <ReasoningTrigger />
+                          <ReasoningContent>{part.text}</ReasoningContent>
+                        </Reasoning>
+                      );
+                    }
+                    if (part.type === "text") {
+                      return (
+                        <MessageResponse key={i}>{part.text}</MessageResponse>
+                      );
+                    }
+                    if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
+                      return (
+                        <ToolInvocation key={i} part={part as ToolPart} />
+                      );
+                    }
+                    return null;
+                  })}
+                </MessageContent>
+              </Message>
+            ))
+          )}
         </ConversationContent>
+        <ConversationScrollButton />
+        {messages.length > 0 && (
+          <ConversationDownload messages={messages} />
+        )}
       </Conversation>
 
       <PromptInputProvider>
