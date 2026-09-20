@@ -5,6 +5,7 @@ import {
   isStepCount,
   streamText,
   toUIMessageStream,
+  wrapLanguageModel,
   type ToolSet,
 } from "ai";
 import type { AppEnv } from "../types";
@@ -13,6 +14,7 @@ import { tools, createExecuteCodeTool } from "../tools";
 import { loadMcpTools } from "../mcp";
 import { loadSkill, buildSkillsPrompt } from "../skills";
 import { flushTelemetry } from "../telemetry";
+import { createGuardrails } from "../guardrails";
 
 const chat = new Hono<AppEnv>();
 
@@ -33,8 +35,17 @@ chat.post("/chat", async (c) => {
 
   const skillsPrompt = buildSkillsPrompt();
 
+  const guardrails = createGuardrails(c.env);
+  const baseModel = config.createModel(c.env);
+  const model = guardrails
+    ? wrapLanguageModel({
+        model: baseModel as Parameters<typeof wrapLanguageModel>[0]["model"],
+        middleware: guardrails,
+      })
+    : baseModel;
+
   const result = streamText({
-    model: config.createModel(c.env),
+    model,
     system: `You are a helpful assistant.\n\n${skillsPrompt}`,
     messages: await convertToModelMessages(messages),
     providerOptions: config.providerOptions,

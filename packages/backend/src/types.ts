@@ -13,5 +13,11 @@ export type AppEnv = {
     E2B_API_KEY?: string;
     /** Cloudflare Sandbox DO binding — required when SANDBOX_PROVIDER=cloudflare */
     SANDBOX?: DurableObjectNamespace<Sandbox>;
+    /** Guardrail tier: "simple" (regex+OpenAI), "local" (Ollama Llama Guard), "cloud" (CF Workers AI), "none" */
+    GUARDRAIL_TIER?: "simple" | "local" | "cloud" | "none";
+    /** Ollama base URL for local guardrails (default: http://localhost:11434) */
+    OLLAMA_BASE_URL?: string;
+    /** CF Workers AI binding — required for cloud guardrail tier */
+    AI: Ai;
   };
 };

@@ -6380,7 +6380,7 @@ snapshots:
 
   ollama-ai-provider-v2@4.0.1(ai@7.0.32(zod@4.6.5))(zod@4.6.5):
     dependencies:
-      '@ai-sdk/provider': 4.0.3
+      '@ai-sdk/provider': 4.0.17
       '@ai-sdk/provider-utils': 5.0.11(zod@4.6.5)
       ai: 7.0.32(zod@4.6.5)
       zod: 4.6.5

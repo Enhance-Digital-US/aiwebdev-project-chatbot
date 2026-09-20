@@ -10,6 +10,11 @@
     "SANDBOX_PROVIDER": "e2b"
   },
 
+  // Workers AI binding for cloud guardrail tier (Llama Guard)
+  "ai": {
+    "binding": "AI"
+  },
+
   "rules": [
     {
       "type": "Text",
