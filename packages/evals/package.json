@@ -7,7 +7,8 @@
     "eval:quality": "promptfoo eval --filter-pattern 'quality'",
     "eval:tools": "promptfoo eval --filter-pattern 'tools'",
     "eval:view": "promptfoo view",
-    "eval:braintrust": "npx tsx scripts/braintrust-eval.ts"
+    "eval:braintrust": "npx tsx scripts/braintrust-eval.ts",
+    "eval:langfuse": "npx tsx scripts/langfuse-evals.ts"
   },
   "dependencies": {
     "promptfoo": "^0.123.1",
