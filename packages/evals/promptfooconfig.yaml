@@ -1,0 +1,14 @@
+description: "Chatbot eval suite"
+
+providers:
+  - id: "file://providers/chatbot.ts"
+    label: "Chatbot (full stack)"
+
+defaultTest:
+  options:
+    provider: "openai:gpt-4o-mini"
+
+tests:
+  - file://datasets/safety.yaml
+  - file://datasets/quality.yaml
+  - file://datasets/tools.yaml
