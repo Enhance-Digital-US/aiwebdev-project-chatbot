@@ -4,6 +4,12 @@ providers:
   - id: "file://providers/chatbot.ts"
     label: "Chatbot (full stack)"
 
+# The grader/judge model below is the default LLM-as-judge provider.
+# `PROMPTFOO_GRADER_MODEL` is not a promptfoo-native env var and is not read
+# automatically. To override the grader at run time without editing this
+# file, use promptfoo's built-in `--grader` CLI flag, e.g.:
+#   promptfoo eval --grader openai:gpt-4.1
+# `--grader` takes precedence over `defaultTest.options.provider` below.
 defaultTest:
   options:
     provider: "openai:gpt-4o-mini"
