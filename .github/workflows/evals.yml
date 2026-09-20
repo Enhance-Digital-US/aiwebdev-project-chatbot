@@ -1,0 +1,95 @@
+name: Evals
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/backend/**"
+      - "packages/evals/**"
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build backend
+        run: pnpm --filter backend build
+
+      - name: Start backend dev server
+        run: |
+          cd packages/backend
+          npx wrangler dev --port 8787 &
+          sleep 5
+          curl --retry 5 --retry-delay 2 --retry-connrefused http://localhost:8787/api/chat || exit 1
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GUARDRAIL_TIER: simple
+
+      - name: "Run safety evals (threshold: 100%)"
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'safety' \
+            --ci \
+            --output results-safety.json \
+            --threshold 1.0 \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8787
+
+      - name: "Run quality evals (threshold: 85%)"
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'quality' \
+            --ci \
+            --output results-quality.json \
+            --threshold 0.85 \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8787
+
+      - name: "Run tool use evals (threshold: 90%)"
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'tools' \
+            --ci \
+            --output results-tools.json \
+            --threshold 0.90 \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8787
+
+      - name: Generate HTML report
+        if: always()
+        run: |
+          cd packages/evals
+          npx promptfoo view --yes --output report.html || true
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            packages/evals/results-*.json
+            packages/evals/report.html
