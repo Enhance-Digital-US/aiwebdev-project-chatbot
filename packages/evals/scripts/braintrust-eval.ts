@@ -23,14 +23,23 @@ async function callChatbot(prompt: string): Promise<string> {
     { role: "user" as const, parts: [{ type: "text" as const, text: prompt }] },
   ];
 
-  const res = await fetch(`${CHATBOT_URL}/api/chat`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      messages,
-      model: "gpt-4o-mini",
-    }),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${CHATBOT_URL}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        messages,
+        model: "gpt-4o-mini",
+      }),
+    });
+  } catch (err) {
+    throw new Error(`Failed to reach chatbot at ${CHATBOT_URL}: ${err}`);
+  }
+
+  if (!res.ok) {
+    throw new Error(`Chatbot API error: ${res.status} ${res.statusText}`);
+  }
 
   // The backend responds via `createUIMessageStreamResponse`, which emits
   // Server-Sent Events: `data: <json>\n\n`, terminated by `data: [DONE]\n\n`.
