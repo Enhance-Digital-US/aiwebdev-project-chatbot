@@ -5,8 +5,13 @@ const CHATBOT_URL = process.env.CHATBOT_URL ?? "http://localhost:8787";
 export default class ChatbotProvider implements ApiProvider {
   private modelId: string;
 
-  constructor(modelId?: string) {
-    this.modelId = modelId ?? "gpt-4o-mini";
+  constructor(
+    options?: string | { id?: string; config?: Record<string, unknown>; env?: Record<string, string> },
+  ) {
+    this.modelId =
+      typeof options === "string"
+        ? options
+        : (options?.config?.model as string) ?? "gpt-4o-mini";
   }
 
   id() {
