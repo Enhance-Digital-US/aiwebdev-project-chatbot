@@ -1,14 +1,16 @@
 # Chatbot API Backend
 
-Hono + Cloudflare Workers backend with AI SDK v7, OpenAI and Ollama providers, and Langfuse observability via OpenTelemetry.
+Hono + Cloudflare Workers backend with AI SDK v7, multi-provider model support, MCP tool federation, agent skills, three-tier guardrails, sandboxed code execution, and Langfuse observability via OpenTelemetry.
 
 ## Prerequisites
 
-- [Node.js](https://nodejs.org/) v18+
+- [Node.js](https://nodejs.org/) v22+ (see `.nvmrc`)
 - [pnpm](https://pnpm.io/)
 - A [Cloudflare account](https://dash.cloudflare.com/sign-up)
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - A [Langfuse account](https://cloud.langfuse.com) (US region)
+- (Optional) [Ollama](https://ollama.com) on `:11434` — for `gemma4:12b` model and local guardrails
+- (Optional) [E2B API key](https://e2b.dev) — for sandboxed code execution
 
 ## Local Development
 
@@ -28,6 +30,16 @@ Create `packages/backend/.dev.vars` (gitignored):
 OPENAI_API_KEY=sk-proj-your-openai-key
 LANGFUSE_PUBLIC_KEY=pk-lf-your-langfuse-public-key
 LANGFUSE_SECRET_KEY=sk-lf-your-langfuse-secret-key
+
+# Optional — MCP client implementation ("raw" or "ai-sdk", default: "raw")
+MCP_IMPL=raw
+
+# Optional — Guardrail tier ("simple", "local", "cloud", or "none", default: "none")
+GUARDRAIL_TIER=simple
+
+# Optional — Sandbox code execution ("e2b", "cloudflare", or omit for stub)
+SANDBOX_PROVIDER=e2b
+E2B_API_KEY=e2b_your-api-key
 ```
 
 Get your Langfuse keys from: **Langfuse Dashboard → Settings → API Keys**
@@ -70,17 +82,16 @@ This opens a browser window for OAuth. Once authenticated, Wrangler stores your 
 Secrets are encrypted and stored by Cloudflare — they're never in your code or config files.
 
 ```bash
-# Run each command and paste the key value when prompted:
-
+# Required — run each command and paste the key value when prompted:
 npx wrangler secret put OPENAI_API_KEY
-# Paste your OpenAI API key
-
 npx wrangler secret put LANGFUSE_PUBLIC_KEY
-# Paste your Langfuse public key (pk-lf-...)
-
 npx wrangler secret put LANGFUSE_SECRET_KEY
-# Paste your Langfuse secret key (sk-lf-...)
+
+# Optional — only if using E2B sandbox:
+npx wrangler secret put E2B_API_KEY
 ```
+
+Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`) is set via `vars` in `wrangler.jsonc`.
 
 To verify secrets are set:
 
@@ -88,17 +99,29 @@ To verify secrets are set:
 npx wrangler secret list
 ```
 
-### Step 3: Review `wrangler.toml`
+### Step 3: Review `wrangler.jsonc`
 
-```toml
-name = "chatbot-api"
-main = "src/index.ts"
-compatibility_date = "2025-01-01"
-compatibility_flags = ["nodejs_compat"]
+```jsonc
+{
+  "name": "chatbot-api",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "vars": {
+    "MCP_IMPL": "raw",
+    "SANDBOX_PROVIDER": "e2b"
+  },
+  "ai": { "binding": "AI" },
+  "rules": [
+    { "type": "Text", "globs": ["**/*.md"], "fallthrough": true }
+  ]
+}
 ```
 
 Key points:
 - **`nodejs_compat`** is required — the OTel packages use Node APIs (`Buffer`, `process.hrtime`) that this flag polyfills in Workers.
+- **`ai` binding** — provides the `AI` binding for the `cloud` guardrail tier (Llama Guard via Workers AI).
+- **`rules`** — the `Text` rule for `**/*.md` enables raw-importing SKILL.md files at build time.
 - **No `[observability.traces]` section** — Workers native tracing creates a separate trace tree from `@opentelemetry/api`, which would send Langfuse disconnected duplicate traces.
 
 ### Step 4: Deploy
@@ -148,24 +171,206 @@ Then redeploy.
 
 ## API Routes
 
-| Route | Method | Provider | Model |
-|-------|--------|----------|-------|
-| `/api/chat` | POST | OpenAI | `gpt-4o-mini` |
-| `/api/ollama-chat` | POST | Ollama (local) | `gemma4:12b` |
+| Route | Method | Description |
+|-------|--------|-------------|
+| `POST /api/chat` | POST | Accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream |
 
-Both routes accept the AI SDK UI message format and return SSE streams.
+The `model` field defaults to `gpt-4o-mini`. Available models are registered in `providers.ts`:
+
+| Model ID | Provider | Notes |
+|----------|----------|-------|
+| `gpt-4o-mini` | OpenAI | Default, supports tools |
+| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running |
+
+## MCP — Remote Tool Federation
+
+The chatbot connects to external [Model Context Protocol](https://modelcontextprotocol.io/) servers and exposes their tools alongside local tools. This lets the model call remote APIs (search docs, query knowledge bases) without custom tool implementations.
+
+### Architecture
+
+Two interchangeable MCP client implementations behind a common `McpToolLoader` interface:
+
+| Implementation | File | Description |
+|---------------|------|-------------|
+| **Raw** (default) | `mcp/raw-loader.ts` | Hand-rolled Streamable HTTP client (~150 lines). Handles both plain JSON and SSE JSON-RPC responses. |
+| **AI SDK** | `mcp/ai-sdk-loader.ts` | Uses `@ai-sdk/mcp` `createMCPClient` |
+
+Selected via the `MCP_IMPL` env var (default: `"raw"`).
+
+### Configured Servers
+
+Defined in `mcp/config.ts`:
+
+| Server | URL | Purpose |
+|--------|-----|---------|
+| `cf-docs` | `https://docs.mcp.cloudflare.com/mcp` | Cloudflare documentation search |
+| `deepwiki` | `https://mcp.deepwiki.com/mcp` | Open-source project knowledge base |
+
+Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions with local tools.
+
+### Connection Handling
+
+- All servers connect in parallel with a **5-second timeout** per server
+- Failed connections log a warning and are skipped — the chatbot continues with available tools
+- Sessions are cleaned up via `DELETE` in the `onEnd` callback (deferred with `waitUntil`)
+
+### Adding an MCP Server
+
+Add an entry to the `mcpServers` array in `mcp/config.ts`:
+
+```typescript
+{
+  name: "my-server",
+  url: "https://my-server.example.com/mcp",
+  enabled: true,
+}
+```
+
+## Skills — On-Demand Behavioral Instructions
+
+Skills are behavioral instruction sets (following the [agentskills.io](https://agentskills.io) spec) that the model loads on demand via a `loadSkill` tool call. They modify how the model responds without changing the underlying model or system prompt permanently.
+
+### How It Works
+
+1. The system prompt includes a **skill catalog** listing available skills and their descriptions
+2. When a user's request matches a skill, the model calls `loadSkill({ name: "skill-name" })`
+3. The tool returns the skill's markdown instructions, which the model follows for subsequent responses
+
+### Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| `eli5-explainer` | Explains concepts using simple everyday analogies, short sentences, and no unexplained jargon |
+| `senior-architect` | Responds as a production-focused architect — leads with trade-offs, considers failure modes, references industry patterns |
+
+### Skill Format
+
+Each skill is a `SKILL.md` file with YAML frontmatter:
+
+```markdown
+---
+name: my-skill
+description: One-line description the model uses to decide when to load this skill.
+---
+
+# Instructions
+
+Markdown body with behavioral instructions...
+```
+
+Skills are imported as raw text at build time via Wrangler module rules (`"type": "Text"` for `**/*.md`).
+
+### Adding a Skill
+
+1. Create `skills/<name>/SKILL.md` with frontmatter and instructions
+2. Add a raw import in `skills/discovery.ts`
+3. Add the `{ raw, path }` entry to the `rawSkills` array
+
+## Guardrails — Runtime Safety
+
+Three-tier runtime content safety system implemented as [AI SDK Language Model Middleware](https://ai-sdk.dev/docs/ai-sdk-core/middleware). The middleware wraps the model and intercepts every step in the agentic loop — user messages, tool results, and model output.
+
+### Tiers
+
+| Tier | Engine | When to Use |
+|------|--------|-------------|
+| `simple` | Regex blocklist + [OpenAI Moderation API](https://platform.openai.com/docs/guides/moderation) | Fast, low-cost, good default for production |
+| `local` | [Llama Guard 3](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) via Ollama | Full classification, no external API calls, requires Ollama |
+| `cloud` | Llama Guard 3 8B via [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) | Full classification at the edge, no local GPU needed |
+| `none` | Disabled | No safety checks (default) |
+
+Selected via the `GUARDRAIL_TIER` env var.
+
+### How It Works
+
+**Input checking** (`transformParams`): Before each model call, new messages (user input and tool results) are extracted and classified. If unsafe content is detected, the request is rejected with a descriptive error naming the violated categories.
+
+**Output checking** (`wrapStream`): The model's streaming output is filtered in real-time:
+- **Regex fast-path**: Each text delta is checked against injection/blocklist patterns for instant filtering
+- **Sentence-level buffering**: Text accumulates until a sentence boundary (`.` `!` `?` followed by whitespace, or `\n\n`), then the complete sentence is released — this prevents partial-sentence false positives
+
+### Safety Categories (Llama Guard)
+
+S1: Violent Crimes, S2: Non-Violent Crimes, S3: Sex-Related Crimes, S4: Child Sexual Exploitation, S5: Defamation, S6: Specialized Advice, S7: Privacy, S8: Intellectual Property, S9: Indiscriminate Weapons, S10: Hate, S11: Suicide & Self-Harm, S12: Sexual Content, S13: Elections
+
+### Simple Tier Details
+
+The `simple` tier combines two checks:
+
+1. **Regex patterns** — prompt injection attempts (`ignore previous instructions`, `reveal your system prompt`, `bypass restrictions`, etc.) and harmful content blocklist
+2. **OpenAI Moderation API** — broad content policy classification (hate, violence, self-harm, sexual content, etc.)
+
+Regex runs first (synchronous, zero latency); OpenAI Moderation only fires if regex passes.
+
+## Sandbox Code Execution
+
+The `executeCode` tool lets the model run user code in a secure, isolated sandbox. Supports Python and JavaScript.
+
+### Providers
+
+| Provider | Env Value | Description |
+|----------|-----------|-------------|
+| [E2B](https://e2b.dev) | `e2b` | Cloud sandboxes with 30s creation timeout, 15s execution timeout |
+| [Cloudflare Sandbox](https://developers.cloudflare.com/sandbox/) | `cloudflare` | Durable Object-based sandboxes at the edge |
+| Stub | _(default)_ | Simulated output for development — no real execution |
+
+Selected via the `SANDBOX_PROVIDER` env var. E2B requires `E2B_API_KEY`. Cloudflare requires a `SANDBOX` Durable Object binding in `wrangler.jsonc`.
+
+### How It Works
+
+1. The model decides code execution is needed (e.g., math computation, data analysis, code testing)
+2. It calls `executeCode({ code: "...", language: "python" })`
+3. The tool creates a sandbox, writes the code to a file, executes it, and returns `{ stdout, stderr, exitCode }`
+4. The sandbox is destroyed after execution
+
+### Local Tools Summary
+
+| Tool | File | Description |
+|------|------|-------------|
+| `getWeather` | `tools/weather.ts` | Weather information lookup |
+| `convertUnits` | `tools/convert-units.ts` | Unit conversion |
+| `executeCode` | `tools/execute-code.ts` | Sandboxed code execution (Python/JavaScript) |
+| `loadSkill` | `skills/load-skill.ts` | Load behavioral skill instructions |
+
+MCP remote tools are merged alongside these. Tools are skipped entirely when `supportsTools === false` on the model config (e.g., models that don't support function calling).
 
 ## Project Structure
 
 ```
 packages/backend/
 ├── src/
-│   ├── index.ts        # Hono app, routes, CORS, telemetry middleware
-│   └── telemetry.ts    # Langfuse OTLP exporter, provider init, flush
-├── .dev.vars           # Local secrets (gitignored)
+│   ├── index.ts           # Hono app entry point
+│   ├── providers.ts       # Model registry (OpenAI, Ollama)
+│   ├── telemetry.ts       # Langfuse OTLP exporter, flush
+│   ├── routes/
+│   │   └── chat.ts        # POST /api/chat — orchestrates all subsystems
+│   ├── tools/
+│   │   ├── index.ts       # Local tool registry
+│   │   ├── weather.ts     # getWeather tool
+│   │   ├── convert-units.ts # convertUnits tool
+│   │   └── execute-code.ts  # executeCode tool (E2B / CF Sandbox / stub)
+│   ├── mcp/
+│   │   ├── config.ts      # MCP server list
+│   │   ├── index.ts       # loadMcpTools orchestrator
+│   │   ├── raw-loader.ts  # Streamable HTTP MCP client
+│   │   ├── ai-sdk-loader.ts # @ai-sdk/mcp client
+│   │   └── types.ts       # McpToolLoader interface
+│   ├── skills/
+│   │   ├── discovery.ts   # Skill parsing, catalog, prompt builder
+│   │   ├── load-skill.ts  # loadSkill tool definition
+│   │   ├── eli5-explainer/SKILL.md
+│   │   └── senior-architect/SKILL.md
+│   └── guardrails/
+│       ├── index.ts       # Tier selection factory
+│       ├── middleware.ts   # LanguageModelMiddleware (input + stream)
+│       ├── checker.ts     # SafetyChecker interface, Llama Guard parser
+│       ├── simple.ts      # Regex + OpenAI Moderation
+│       ├── local.ts       # Llama Guard via Ollama
+│       └── cloud.ts       # Llama Guard via CF Workers AI
+├── .dev.vars              # Local secrets (gitignored)
 ├── package.json
 ├── tsconfig.json
-└── wrangler.toml       # Cloudflare Workers config
+└── wrangler.jsonc         # Cloudflare Workers config
 ```
 
 ## Observability Architecture
@@ -185,6 +390,19 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 - **`SimpleSpanProcessor`** exports immediately on span end (no batching timers — correct for serverless)
 - **`LangfuseFetchExporter`** uses Workers-native `fetch()` with Basic auth
 - **Flush** happens in each route's `onEnd` callback via `waitUntil()` — ensures spans have complete token counts before export
+
+## Environment Variables
+
+| Variable | Required | Default | Purpose |
+|----------|----------|---------|---------|
+| `OPENAI_API_KEY` | Yes | — | OpenAI model + moderation API (simple guardrail tier) |
+| `LANGFUSE_PUBLIC_KEY` | Yes | — | Langfuse telemetry |
+| `LANGFUSE_SECRET_KEY` | Yes | — | Langfuse telemetry |
+| `MCP_IMPL` | No | `raw` | MCP client implementation: `"raw"` or `"ai-sdk"` |
+| `GUARDRAIL_TIER` | No | `none` | Safety tier: `"simple"`, `"local"`, `"cloud"`, or `"none"` |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for local guardrails and gemma4 model |
+| `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
+| `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
 
 ## Disabling Prompt/Completion Logging
 
@@ -209,5 +427,11 @@ streamText({
 | No traces in Langfuse | Placeholder or wrong keys in `.dev.vars` | Replace with real keys from Langfuse dashboard |
 | `Uncaught [object Array]` in wrangler logs | Flush promise rejection (auth failure) | Already handled by `.catch(() => {})` in `flushTelemetry()` |
 | Token counts show 0 | Flush happening before stream completes | Ensure flush is in `onEnd` callback, not post-middleware |
-| Two disconnected traces per request | Workers native tracing enabled | Remove `[observability.traces]` from `wrangler.toml` |
+| Two disconnected traces per request | Workers native tracing enabled | Remove `[observability.traces]` from `wrangler.jsonc` |
 | Build error: cannot resolve OTel packages | Missing direct dependencies | Run `pnpm --filter backend add @opentelemetry/resources @opentelemetry/core` |
+| MCP server "X" unavailable | Server down or timed out (5s) | Check the server URL in `mcp/config.ts`; set `enabled: false` to skip |
+| `Content blocked by guardrails: ...` | Input classified as unsafe | Expected behavior — review the flagged categories in the error message |
+| Guardrails not running | `GUARDRAIL_TIER` not set | Defaults to `"none"` — set to `"simple"`, `"local"`, or `"cloud"` in `.dev.vars` |
+| `E2B_API_KEY is not set` | Using E2B sandbox without API key | Set `E2B_API_KEY` in `.dev.vars` or switch to stub (`SANDBOX_PROVIDER` unset) |
+| Code execution returns simulated output | Using stub sandbox provider | Set `SANDBOX_PROVIDER=e2b` with a valid `E2B_API_KEY` for real execution |
+| Skills not appearing in model output | Missing import or `rawSkills` entry | Ensure the SKILL.md is imported and added to the array in `skills/discovery.ts` |
