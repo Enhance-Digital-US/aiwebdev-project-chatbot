@@ -5,7 +5,11 @@ type TransformParamsArg = Parameters<
 >[0];
 export type GuardPrompt = TransformParamsArg["params"]["prompt"];
 
-export type GuardMessage = { role: "user" | "assistant"; content: string };
+export type GuardMessage = {
+  role: "user" | "assistant";
+  content: string;
+  source?: "user" | "tool";
+};
 
 export type SafetyResult = {
   safe: boolean;
@@ -80,9 +84,18 @@ export function extractGuardMessages(
     }
 
     if (msg.role === "tool") {
-      const text = msg.content
-        .map((p: { type: string; output?: unknown }) => {
-          if (p.type !== "tool-result") return "";
+      const parts = msg.content as Array<{
+        type: string;
+        toolName?: string;
+        output?: unknown;
+      }>;
+      const toolResults = parts.filter((p) => p.type === "tool-result");
+      const allFromLoadSkill =
+        toolResults.length > 0 &&
+        toolResults.every((p) => p.toolName === "loadSkill");
+
+      const text = toolResults
+        .map((p) => {
           const out = p.output as
             | { type: string; value: unknown }
             | undefined;
@@ -93,7 +106,13 @@ export function extractGuardMessages(
         })
         .filter(Boolean)
         .join("\n");
-      if (text) messages.push({ role: "user", content: text });
+      if (text) {
+        messages.push({
+          role: "user",
+          content: text,
+          source: allFromLoadSkill ? "tool" : undefined,
+        });
+      }
     }
   }
 

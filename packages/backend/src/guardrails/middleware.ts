@@ -1,5 +1,5 @@
 import type { LanguageModelMiddleware } from "ai";
-import type { SafetyChecker } from "./checker";
+import type { SafetyChecker, SafetyResult } from "./checker";
 import { extractNewMessages, categoryLabel } from "./checker";
 import { regexCheck } from "./simple";
 
@@ -13,25 +13,50 @@ function findSentenceBoundary(text: string): number {
   return last;
 }
 
+function buildRefusalMessage(categories: string[]): string {
+  const hasSelfHarm = categories.some(
+    (c) => c === "S11" || c.includes("SELF_HARM") || c.includes("SELF-HARM"),
+  );
+
+  if (hasSelfHarm) {
+    return (
+      "I can't help with that, but I want you to know that support is available.\n\n" +
+      "- **988 Suicide & Crisis Lifeline** — call or text 988 (US)\n" +
+      "- **Crisis Text Line** — text HOME to 741741\n" +
+      "- **International Association for Suicide Prevention** — https://www.iasp.info/resources/Crisis_Centres/\n\n" +
+      "You don't have to go through this alone."
+    );
+  }
+
+  const labels = categories.map(categoryLabel).join(", ");
+  return `I'm not able to help with that request. The content was flagged for: ${labels}. Let me know if there's something else I can assist with.`;
+}
+
 export function createGuardrailMiddleware(
-  checker: SafetyChecker
+  checker: SafetyChecker,
 ): LanguageModelMiddleware {
   let previousMessageCount = 0;
+  let blockedResult: SafetyResult | null = null;
 
   return {
     transformParams: async ({ params }) => {
+      blockedResult = null;
       const newMessages = extractNewMessages(
         params.prompt,
-        previousMessageCount
+        previousMessageCount,
       );
 
-      if (newMessages.length > 0) {
-        const result = await checker(newMessages);
+      // Skip tool-sourced messages — they contain trusted first-party content
+      // (e.g. skill instructions) that may match injection heuristics
+      const checkableMessages = newMessages.filter(
+        (m) => m.source !== "tool",
+      );
+
+      if (checkableMessages.length > 0) {
+        const result = await checker(checkableMessages);
         if (!result.safe) {
-          const labels = result.categories.map(categoryLabel).join(", ");
-          throw new Error(
-            `Content blocked by guardrails: ${labels}`
-          );
+          blockedResult = result;
+          return params;
         }
       }
 
@@ -39,10 +64,43 @@ export function createGuardrailMiddleware(
       return params;
     },
 
-    wrapStream: async ({ doStream, params }) => {
+    wrapStream: async ({ doStream }) => {
+      if (blockedResult) {
+        const refusal = buildRefusalMessage(blockedResult.categories);
+        blockedResult = null;
+
+        const partId = "guard-refusal";
+        const stream = new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: "text-start", id: partId });
+            controller.enqueue({
+              type: "text-delta",
+              id: partId,
+              delta: refusal,
+            });
+            controller.enqueue({ type: "text-end", id: partId });
+            controller.enqueue({
+              type: "finish",
+              finishReason: "stop",
+              usage: {
+                inputTokens: {
+                  total: 0,
+                  noCache: undefined,
+                  cacheRead: undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: { total: 0 },
+              },
+            });
+            controller.close();
+          },
+        });
+
+        return { stream };
+      }
+
       const { stream, ...rest } = await doStream();
       let sentenceBuffer = "";
-      let fullText = "";
 
       type StreamChunk = (typeof stream) extends ReadableStream<infer T>
         ? T
@@ -50,42 +108,53 @@ export function createGuardrailMiddleware(
 
       const transform = new TransformStream<StreamChunk, StreamChunk>({
         transform(chunk: StreamChunk, controller) {
+          if (chunk.type === "text-end" && sentenceBuffer.length > 0) {
+            const check = regexCheck(sentenceBuffer);
+            const text = check.safe ? sentenceBuffer : " [Content filtered] ";
+            controller.enqueue({
+              type: "text-delta",
+              id: (chunk as { id: string }).id,
+              delta: text,
+            } as StreamChunk);
+            sentenceBuffer = "";
+          }
+
           if (chunk.type !== "text-delta") {
             controller.enqueue(chunk);
             return;
           }
 
           const delta = (chunk as { type: "text-delta"; delta: string }).delta;
-          const regex = regexCheck(delta);
-          if (!regex.safe) {
-            controller.enqueue({
-              ...chunk,
-              delta: " [Content filtered] ",
-            } as StreamChunk);
-            return;
-          }
-
           sentenceBuffer += delta;
-          fullText += delta;
 
           const boundary = findSentenceBoundary(sentenceBuffer);
           if (boundary !== -1) {
             const sentence = sentenceBuffer.slice(0, boundary + 1);
             sentenceBuffer = sentenceBuffer.slice(boundary + 1);
 
-            controller.enqueue({
-              ...chunk,
-              delta: sentence,
-            } as StreamChunk);
+            const check = regexCheck(sentence);
+            if (!check.safe) {
+              controller.enqueue({
+                ...chunk,
+                delta: " [Content filtered] ",
+              } as StreamChunk);
+            } else {
+              controller.enqueue({
+                ...chunk,
+                delta: sentence,
+              } as StreamChunk);
+            }
           }
         },
 
         flush(controller) {
           if (sentenceBuffer.length > 0) {
+            const check = regexCheck(sentenceBuffer);
+            const text = check.safe ? sentenceBuffer : " [Content filtered] ";
             controller.enqueue({
               type: "text-delta",
               id: "guard-flush",
-              delta: sentenceBuffer,
+              delta: text,
             } as StreamChunk);
           }
         },
