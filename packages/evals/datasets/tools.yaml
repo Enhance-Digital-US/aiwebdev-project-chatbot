@@ -1,85 +1,84 @@
 # Tool use correctness test suite
 # Tests that the chatbot invokes tools correctly and incorporates results
 
-tests:
-  # --- Weather tool ---
-  - description: "tools: invokes weather tool for weather query"
-    vars:
-      prompt: "What's the weather in Tokyo?"
-    assert:
-      - type: llm-rubric
-        value: "The response mentions a temperature and weather condition for Tokyo, indicating the weather tool was used"
+# --- Weather tool ---
+- description: "tools: invokes weather tool for weather query"
+  vars:
+    prompt: "What's the weather in Tokyo?"
+  assert:
+    - type: llm-rubric
+      value: "The response mentions a temperature and weather condition for Tokyo, indicating the weather tool was used"
 
-  - description: "tools: invokes weather tool for another city"
-    vars:
-      prompt: "Tell me the current weather in London"
-    assert:
-      - type: llm-rubric
-        value: "The response mentions weather information for London specifically"
+- description: "tools: invokes weather tool for another city"
+  vars:
+    prompt: "Tell me the current weather in London"
+  assert:
+    - type: llm-rubric
+      value: "The response mentions weather information for London specifically"
 
-  # --- Unit conversion tool ---
-  - description: "tools: converts miles to kilometers"
-    vars:
-      prompt: "Convert 5 miles to kilometers"
-    assert:
-      - type: llm-rubric
-        value: "The response contains a value close to 8.047 km, indicating the conversion tool was used correctly"
+# --- Unit conversion tool ---
+- description: "tools: converts miles to kilometers"
+  vars:
+    prompt: "Convert 5 miles to kilometers"
+  assert:
+    - type: llm-rubric
+      value: "The response contains a value close to 8.047 km, indicating the conversion tool was used correctly"
 
-  - description: "tools: converts celsius to fahrenheit"
-    vars:
-      prompt: "What is 100 degrees Celsius in Fahrenheit?"
-    assert:
-      - type: contains
-        value: "212"
+- description: "tools: converts celsius to fahrenheit"
+  vars:
+    prompt: "What is 100 degrees Celsius in Fahrenheit?"
+  assert:
+    - type: contains
+      value: "212"
 
-  - description: "tools: converts kg to lbs"
-    vars:
-      prompt: "How many pounds is 10 kilograms?"
-    assert:
-      - type: llm-rubric
-        value: "The response contains a value close to 22.046 lbs"
+- description: "tools: converts kg to lbs"
+  vars:
+    prompt: "How many pounds is 10 kilograms?"
+  assert:
+    - type: llm-rubric
+      value: "The response contains a value close to 22.046 lbs"
 
-  - description: "tools: handles unsupported conversion gracefully"
-    vars:
-      prompt: "Convert 5 liters to gallons"
-    assert:
-      - type: llm-rubric
-        value: "The response either explains it cannot convert those units or provides a reasonable answer without crashing"
+- description: "tools: handles unsupported conversion gracefully"
+  vars:
+    prompt: "Convert 5 liters to gallons"
+  assert:
+    - type: llm-rubric
+      value: "The response either explains it cannot convert those units or provides a reasonable answer without crashing"
 
-  # --- Code execution tool ---
-  - description: "tools: executes simple code"
-    vars:
-      prompt: "Run this code: console.log(2 + 2)"
-    assert:
-      - type: llm-rubric
-        value: "The response shows the code was executed and the result is 4"
+# --- Code execution tool ---
+- description: "tools: executes simple code"
+  vars:
+    prompt: "Run this code: console.log(2 + 2)"
+  assert:
+    - type: llm-rubric
+      value: "The response shows the code was executed and the result is 4"
 
-  - description: "tools: executes fibonacci calculation"
-    vars:
-      prompt: "Write and execute code to calculate the 10th fibonacci number"
-    assert:
-      - type: llm-rubric
-        value: "The response shows code execution with a result of 55 (the 10th fibonacci number)"
+- description: "tools: executes fibonacci calculation"
+  vars:
+    prompt: "Write and execute code to calculate the 10th fibonacci number"
+  assert:
+    - type: llm-rubric
+      value: "The response shows code execution with a result of 55 (the 10th fibonacci number)"
 
-  # --- No-tool queries ---
-  - description: "tools: does not use tools for simple question"
-    vars:
-      prompt: "Tell me a short joke"
-    assert:
-      - type: llm-rubric
-        value: "The response is a joke or humorous content, provided directly without mentioning tool calls or API results"
+# --- No-tool queries ---
+- description: "tools: does not use tools for simple question"
+  vars:
+    prompt: "Tell me a short joke"
+  assert:
+    - type: llm-rubric
+      value: "The response is a joke or humorous content, provided directly without mentioning tool calls or API results"
 
-  - description: "tools: does not use tools for explanation"
-    vars:
-      prompt: "Explain the difference between let and const in JavaScript"
-    assert:
-      - type: llm-rubric
-        value: "The response explains let vs const directly without using any external tools"
+- description: "tools: does not use tools for explanation"
+  vars:
+    prompt: "Explain the difference between let and const in JavaScript"
+  assert:
+    - type: llm-rubric
+      value: "The response explains let vs const directly without using any external tools"
 
-  # --- Multi-tool scenarios ---
-  - description: "tools: handles question needing two tool calls"
-    vars:
-      prompt: "What's the weather in New York, and convert that temperature from Celsius to Fahrenheit"
-    assert:
-      - type: llm-rubric
-        value: "The response provides weather for New York AND a Fahrenheit conversion of the temperature"
+# --- Multi-tool scenarios ---
+- description: "tools: handles question needing two tool calls"
+  vars:
+    prompt: "What's the weather in New York, and convert that temperature from Celsius to Fahrenheit"
+  assert:
+    - type: llm-rubric
+      value: "The response provides weather for New York AND a Fahrenheit conversion of the temperature"

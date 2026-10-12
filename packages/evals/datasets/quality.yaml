@@ -1,94 +1,93 @@
 # Response quality test suite
 # Tests factual accuracy, relevance, formatting, and edge cases
 
-tests:
-  # --- Factual accuracy ---
-  - description: "quality: answers factual question correctly"
-    vars:
-      prompt: "What is the capital of France?"
-    assert:
-      - type: contains
-        value: "Paris"
-      - type: llm-rubric
-        value: "The answer is correct, concise, and directly addresses the question"
+# --- Factual accuracy ---
+- description: "quality: answers factual question correctly"
+  vars:
+    prompt: "What is the capital of France?"
+  assert:
+    - type: contains
+      value: "Paris"
+    - type: llm-rubric
+      value: "The answer is correct, concise, and directly addresses the question"
 
-  - description: "quality: handles math question"
-    vars:
-      prompt: "What is 15% of 200?"
-    assert:
-      - type: contains
-        value: "30"
+- description: "quality: handles math question"
+  vars:
+    prompt: "What is 15% of 200?"
+  assert:
+    - type: contains
+      value: "30"
 
-  - description: "quality: explains a concept clearly"
-    vars:
-      prompt: "Explain what an API is in simple terms"
-    assert:
-      - type: llm-rubric
-        value: "The explanation is clear, uses simple language, and accurately describes what an API is"
+- description: "quality: explains a concept clearly"
+  vars:
+    prompt: "Explain what an API is in simple terms"
+  assert:
+    - type: llm-rubric
+      value: "The explanation is clear, uses simple language, and accurately describes what an API is"
 
-  # --- Relevance ---
-  - description: "quality: stays on topic"
-    vars:
-      prompt: "What are the benefits of TypeScript over JavaScript?"
-    assert:
-      - type: llm-rubric
-        value: "The response discusses TypeScript advantages (type safety, tooling, etc.) without going off-topic"
+# --- Relevance ---
+- description: "quality: stays on topic"
+  vars:
+    prompt: "What are the benefits of TypeScript over JavaScript?"
+  assert:
+    - type: llm-rubric
+      value: "The response discusses TypeScript advantages (type safety, tooling, etc.) without going off-topic"
 
-  - description: "quality: handles ambiguous question"
-    vars:
-      prompt: "What is a tree?"
-    assert:
-      - type: llm-rubric
-        value: "The response provides a reasonable interpretation and answer, likely about biological trees or possibly asks for clarification"
+- description: "quality: handles ambiguous question"
+  vars:
+    prompt: "What is a tree?"
+  assert:
+    - type: llm-rubric
+      value: "The response provides a reasonable interpretation and answer, likely about biological trees or possibly asks for clarification"
 
-  # --- Formatting ---
-  - description: "quality: formats list when appropriate"
-    vars:
-      prompt: "List 5 popular programming languages"
-    assert:
-      - type: llm-rubric
-        value: "The response lists 5 real programming languages in a clear format (numbered or bulleted)"
+# --- Formatting ---
+- description: "quality: formats list when appropriate"
+  vars:
+    prompt: "List 5 popular programming languages"
+  assert:
+    - type: llm-rubric
+      value: "The response lists 5 real programming languages in a clear format (numbered or bulleted)"
 
-  - description: "quality: provides structured explanation"
-    vars:
-      prompt: "Compare REST and GraphQL"
-    assert:
-      - type: llm-rubric
-        value: "The response provides a structured comparison covering key differences between REST and GraphQL"
+- description: "quality: provides structured explanation"
+  vars:
+    prompt: "Compare REST and GraphQL"
+  assert:
+    - type: llm-rubric
+      value: "The response provides a structured comparison covering key differences between REST and GraphQL"
 
-  # --- Edge cases ---
-  - description: "quality: handles very short input"
-    vars:
-      prompt: "Hi"
-    assert:
-      - type: llm-rubric
-        value: "The response is a reasonable greeting and does not error or return empty content"
+# --- Edge cases ---
+- description: "quality: handles very short input"
+  vars:
+    prompt: "Hi"
+  assert:
+    - type: llm-rubric
+      value: "The response is a reasonable greeting and does not error or return empty content"
 
-  - description: "quality: handles question it cannot answer"
-    vars:
-      prompt: "What will the stock price of Apple be next Tuesday?"
-    assert:
-      - type: llm-rubric
-        value: "The response acknowledges it cannot predict stock prices rather than making up a specific number"
+- description: "quality: handles question it cannot answer"
+  vars:
+    prompt: "What will the stock price of Apple be next Tuesday?"
+  assert:
+    - type: llm-rubric
+      value: "The response acknowledges it cannot predict stock prices rather than making up a specific number"
 
-  - description: "quality: handles multi-part question"
-    vars:
-      prompt: "What is Python, who created it, and when was it first released?"
-    assert:
-      - type: llm-rubric
-        value: "The response addresses all three parts: what Python is, creator (Guido van Rossum), and release date (around 1991)"
+- description: "quality: handles multi-part question"
+  vars:
+    prompt: "What is Python, who created it, and when was it first released?"
+  assert:
+    - type: llm-rubric
+      value: "The response addresses all three parts: what Python is, creator (Guido van Rossum), and release date (around 1991)"
 
-  # --- Helpfulness ---
-  - description: "quality: provides actionable coding help"
-    vars:
-      prompt: "How do I read a JSON file in Node.js?"
-    assert:
-      - type: llm-rubric
-        value: "The response provides working Node.js code for reading a JSON file and explains the approach"
+# --- Helpfulness ---
+- description: "quality: provides actionable coding help"
+  vars:
+    prompt: "How do I read a JSON file in Node.js?"
+  assert:
+    - type: llm-rubric
+      value: "The response provides working Node.js code for reading a JSON file and explains the approach"
 
-  - description: "quality: admits uncertainty appropriately"
-    vars:
-      prompt: "What is the population of the city of Zaltbommel in the Netherlands?"
-    assert:
-      - type: llm-rubric
-        value: "The response either provides a reasonable estimate or transparently states it is unsure, without confidently making up a wrong number"
+- description: "quality: admits uncertainty appropriately"
+  vars:
+    prompt: "What is the population of the city of Zaltbommel in the Netherlands?"
+  assert:
+    - type: llm-rubric
+      value: "The response either provides a reasonable estimate or transparently states it is unsure, without confidently making up a wrong number"

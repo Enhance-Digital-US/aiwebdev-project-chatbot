@@ -56,10 +56,20 @@ export default class ChatbotProvider implements ApiProvider {
           }
         })
         .filter(
-          (chunk): chunk is { type: string; delta?: string } =>
-            chunk?.type === "text-delta",
+          (chunk): chunk is Record<string, unknown> =>
+            chunk?.type === "text-delta" || chunk?.type === "error",
         )
-        .map((chunk) => chunk.delta ?? "")
+        .map((chunk) => {
+          if (chunk.type === "error") {
+            const err = chunk.error;
+            const msg =
+              typeof err === "string"
+                ? err
+                : (err as { message?: string })?.message ?? "unknown";
+            return `[Error: ${msg}]`;
+          }
+          return (chunk.delta as string) ?? "";
+        })
         .join("");
 
       return { output: content };
