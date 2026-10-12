@@ -79,7 +79,7 @@ This opens a browser window for OAuth. Once authenticated, Wrangler stores your 
 
 ### Step 2: Set production secrets
 
-Secrets are encrypted and stored by Cloudflare — they're never in your code or config files.
+Secrets are encrypted and stored by Cloudflare — they're never in your code or config files. Run from `packages/backend`:
 
 ```bash
 # Required — run each command and paste the key value when prompted:
@@ -87,11 +87,18 @@ npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put LANGFUSE_PUBLIC_KEY
 npx wrangler secret put LANGFUSE_SECRET_KEY
 
-# Optional — only if using E2B sandbox:
+# Required while SANDBOX_PROVIDER="e2b" (otherwise executeCode returns an error):
 npx wrangler secret put E2B_API_KEY
+
+# Optional — Clerk auth (user tracking in Langfuse):
+npx wrangler secret put CLERK_SECRET_KEY
+npx wrangler secret put CLERK_PUBLISHABLE_KEY
+
+# Optional — only if your Langfuse project is not in the US region:
+npx wrangler secret put LANGFUSE_BASE_URL   # e.g. https://cloud.langfuse.com
 ```
 
-Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`) is set via `vars` in `wrangler.jsonc`.
+Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`) is set via `vars` in `wrangler.jsonc`. `.dev.vars` is **not** uploaded on deploy.
 
 To verify secrets are set:
 
@@ -101,62 +108,64 @@ npx wrangler secret list
 
 ### Step 3: Review `wrangler.jsonc`
 
+The app ships as a **single Worker**: the Vite build in `packages/frontend/dist` is served via [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/), and only `/api/*` invokes the Hono app.
+
 ```jsonc
-{
-  "name": "chatbot-api",
-  "main": "src/index.ts",
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "vars": {
-    "MCP_IMPL": "raw",
-    "SANDBOX_PROVIDER": "e2b"
-  },
-  "ai": { "binding": "AI" },
-  "rules": [
-    { "type": "Text", "globs": ["**/*.md"], "fallthrough": true }
-  ]
+"assets": {
+  "directory": "../frontend/dist",
+  "binding": "ASSETS",
+  "not_found_handling": "single-page-application",
+  "run_worker_first": ["/api/*"]
 }
 ```
 
 Key points:
+- **`assets`** — static files are served without invoking the Worker (free, no CPU time). Unknown paths fall back to `index.html` so client-side routes work on refresh. `run_worker_first` sends `/api/*` to Hono even if an asset path matches.
+- **Same origin** — frontend and API share a hostname, so no CORS config is needed and Clerk session cookies/tokens just work.
 - **`nodejs_compat`** is required — the OTel packages use Node APIs (`Buffer`, `process.hrtime`) that this flag polyfills in Workers.
+- **`compatibility_date`** — must not exceed what the installed Wrangler's `workerd` supports (`wrangler dev` errors if it does). Bump it alongside Wrangler upgrades.
 - **`ai` binding** — provides the `AI` binding for the `cloud` guardrail tier (Llama Guard via Workers AI).
+- **`GUARDRAIL_TIER`** defaults to `simple` in production. `local` cannot work deployed (no Ollama at the edge).
 - **`rules`** — the `Text` rule for `**/*.md` enables raw-importing SKILL.md files at build time.
-- **No `[observability.traces]` section** — Workers native tracing creates a separate trace tree from `@opentelemetry/api`, which would send Langfuse disconnected duplicate traces.
+- **`observability.enabled`** turns on Workers Logs only. There is deliberately no `observability.traces` — Workers native tracing creates a separate trace tree from `@opentelemetry/api`, which would send Langfuse disconnected duplicate traces.
 
-### Step 4: Deploy
+### Step 4: Configure frontend auth (optional)
+
+`VITE_CLERK_PUBLISHABLE_KEY` is inlined by Vite at **build time** — setting it as a Worker secret does nothing. Put it in `packages/frontend/.env.production` (publishable keys are public, so committing this file is fine) before building. See `packages/frontend/.env.example`.
+
+- **Clerk development instance (`pk_test_…`)** works on `*.workers.dev`.
+- **Clerk production instance (`pk_live_…`)** requires a domain you own (Clerk needs DNS records), so attach a [custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) to the Worker first.
+
+Without the key the app runs unauthenticated, and traces simply omit `langfuse.user.id`.
+
+> **Token origin check:** `CLERK_AUTHORIZED_PARTIES` (comma-separated origins) is passed to Clerk as `authorizedParties`, so tokens minted for other sites on the same Clerk instance are rejected. Production value lives in `wrangler.jsonc`; set `CLERK_AUTHORIZED_PARTIES=http://localhost:5173` in `.dev.vars` for local dev (the Vite proxy means the browser origin is `:5173`, not `:8787`). A malformed entry makes `/api/*` return 500 rather than silently de-authenticating users.
+>
+> Auth currently only **tags** traces; it does not gate `/api/chat`. Anyone with the URL can use the chatbot (and your OpenAI credits).
+
+### Step 5: Deploy
+
+From the repo root:
 
 ```bash
-pnpm --filter backend deploy
+pnpm run deploy
 ```
 
-Or directly:
-
-```bash
-cd packages/backend
-npx wrangler deploy
-```
+This builds the frontend, then the backend, then runs `wrangler deploy`. Use `pnpm run deploy`, not `pnpm deploy` — the latter is pnpm's built-in workspace-deploy command.
 
 Wrangler outputs the production URL:
 
 ```
-Published chatbot-api (x.xx sec)
-  https://chatbot-api.<your-subdomain>.workers.dev
+Uploaded chatbot (x.xx sec)
+Deployed chatbot triggers (x.xx sec)
+  https://chatbot.enhancedigital.workers.dev
+  chatbot.course-projects.ai-web.dev (custom domain)
 ```
 
-### Step 5: Update frontend CORS origin
+The first deploy creates the DNS record and certificate for `chatbot.course-projects.ai-web.dev`; allow a few minutes before the hostname serves over HTTPS.
 
-After deployment, update the CORS origin in `packages/backend/src/index.ts` to include your production frontend URL:
+Other course projects follow the same pattern: each Worker gets its own `<project>.course-projects.ai-web.dev` custom domain, so each is a separate origin (cookies, storage and auth sessions stay isolated).
 
-```typescript
-cors({
-  origin: ["http://localhost:5173", "https://your-frontend.pages.dev"],
-  allowMethods: ["POST"],
-  allowHeaders: ["Content-Type"],
-})
-```
-
-Then redeploy.
+The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreachable from the edge.
 
 ### Step 6: Verify in Langfuse
 

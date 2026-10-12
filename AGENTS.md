@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare (Workers + Pages).
+AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a single Worker (Hono API + frontend via Workers Static Assets) at `https://chatbot.course-projects.ai-web.dev` (Workers Custom Domain).
 
 - **`packages/frontend`** — React 19 + Vite, TanStack Router, Tailwind CSS 4, shadcn/ui + AI Elements
 - **`packages/backend`** — Hono on Cloudflare Workers, AI SDK v7, OpenAI + Ollama providers
@@ -13,13 +13,14 @@ AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare (Worker
 | Command | What it does |
 |---------|-------------|
 | `pnpm dev` (root) | Starts backend (wrangler, :8787) + frontend (vite, :5173) via concurrently |
-| `pnpm build` (root) | Builds both backend and frontend |
+| `pnpm build` (root) | Builds frontend, then backend (backend dry-run bundles `frontend/dist` as assets) |
+| `pnpm run deploy` (root) | Build + `wrangler deploy` (not `pnpm deploy` — that's a pnpm built-in) |
 | `pnpm eval` (packages/evals) | Run all Promptfoo eval suites |
 | `pnpm eval:safety` | Safety suite only |
 | `pnpm eval:quality` | Quality suite only |
 | `pnpm eval:tools` | Tool use suite only |
 
-Vite proxies `/api` to `localhost:8787` in dev. Production uses CF Pages routing.
+Vite proxies `/api` to `localhost:8787` in dev. In production the same Worker serves the SPA from static assets (`not_found_handling: single-page-application`) and runs Hono only for `/api/*` (`run_worker_first`) — same origin, so no CORS.
 
 ## Backend Subsystems (`packages/backend/src/`)
 
@@ -83,9 +84,11 @@ Selected via `GUARDRAIL_TIER` env var. Streaming uses sentence-level buffering �
 
 OpenTelemetry → Langfuse via custom `LangfuseFetchExporter` (Workers-compatible `fetch()` instead of Node `http`). Uses `@ai-sdk/otel` for automatic `gen_ai.*` span instrumentation. `SimpleSpanProcessor` (not Batch) because Workers are short-lived. Flush happens in each route's `streamText({ onEnd })` callback via `waitUntil`.
 
+Langfuse **sessions** and **users** are supported via `enrichSpan` + `runtimeContext`. The chat route passes the `chatId` (from `useChat`) as `langfuse.session.id` and the Clerk `userId` (if authenticated) as `langfuse.user.id` on every span. Auth is optional — traces without a signed-in user simply omit the user attribute.
+
 ## Frontend (`packages/frontend/src/`)
 
-TanStack Router with routes in `src/routes/`. AI Elements components in `src/components/ai-elements/` (owned source, shadcn model). `useChat` from `@ai-sdk/react` manages all chat state.
+TanStack Router with routes in `src/routes/`. AI Elements components in `src/components/ai-elements/` (owned source, shadcn model). `useChat` from `@ai-sdk/react` manages all chat state. Optional Clerk auth (`@clerk/react`) wraps the app when `VITE_CLERK_PUBLISHABLE_KEY` is set — provides sign-in UI and forwards session tokens to the backend.
 
 Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools).
 
@@ -123,6 +126,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local de
 | `OPENAI_API_KEY` | Yes | OpenAI model + moderation API |
 | `LANGFUSE_PUBLIC_KEY` | Yes | Langfuse telemetry |
 | `LANGFUSE_SECRET_KEY` | Yes | Langfuse telemetry |
+| `LANGFUSE_BASE_URL` | No | Langfuse region host (default: `https://us.cloud.langfuse.com`) |
 | `MCP_IMPL` | No | MCP client: `"raw"` (default) or `"ai-sdk"` |
 | `GUARDRAIL_TIER` | No | Guardrail tier: `simple`, `local`, `cloud`, `none` |
 | `OLLAMA_BASE_URL` | No | Ollama URL for local guardrails (default: `http://localhost:11434`) |
@@ -131,6 +135,10 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local de
 | `CHATBOT_URL` | No | Eval provider target (default: `http://localhost:8787`) |
 | `PROMPTFOO_GRADER_MODEL` | No | LLM-as-judge model (default: `openai:gpt-4o-mini`) |
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
+| `CLERK_SECRET_KEY` | No | Clerk auth — enables user tracking in Langfuse |
+| `CLERK_PUBLISHABLE_KEY` | No | Clerk auth — required alongside `CLERK_SECRET_KEY` |
+| `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated origins allowed as Clerk token `azp` (prod in `wrangler.jsonc`, `http://localhost:5173` in `.dev.vars`) |
+| `VITE_CLERK_PUBLISHABLE_KEY` | No | Frontend Clerk auth — inlined at **build time** (frontend `.env.production`); `pk_live_` needs a custom domain |
 
 ## Local Prerequisites
 
