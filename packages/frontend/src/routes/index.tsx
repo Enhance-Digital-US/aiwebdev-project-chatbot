@@ -47,7 +47,8 @@ import {
   SandboxTabs,
 } from "@/components/ai-elements/sandbox";
 import { MessageSquareIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useAuthToken } from "@/auth";
 import {
   Tool as ToolDisplay,
   ToolContent,
@@ -58,7 +59,10 @@ import {
 
 const models = [
   { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" as const },
-  { id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const },
+  // Ollama runs on localhost — only offer it in dev builds
+  ...(import.meta.env.DEV
+    ? [{ id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const }]
+    : []),
 ];
 
 function ToolInvocation({ part }: { part: ToolPart }) {
@@ -94,12 +98,21 @@ export const Route = createFileRoute("/")({
 function ChatPage() {
   const [model, setModel] = useState(models[0].id);
   const [selectorOpen, setSelectorOpen] = useState(false);
+  const { getToken } = useAuthToken();
 
-  const { messages, sendMessage, status } = useChat({
-    transport: new DefaultChatTransport({
-      api: "/api/chat",
-    }),
-  });
+  const transport = useMemo(
+    () =>
+      new DefaultChatTransport({
+        api: "/api/chat",
+        headers: async (): Promise<Record<string, string>> => {
+          const token = await getToken();
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        },
+      }),
+    [getToken]
+  );
+
+  const { messages, sendMessage, status } = useChat({ transport });
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];
 

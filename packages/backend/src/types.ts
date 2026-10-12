@@ -5,6 +5,8 @@ export type AppEnv = {
     OPENAI_API_KEY: string;
     LANGFUSE_PUBLIC_KEY: string;
     LANGFUSE_SECRET_KEY: string;
+    /** Langfuse region host (default: https://us.cloud.langfuse.com) */
+    LANGFUSE_BASE_URL?: string;
     /** MCP client implementation: "raw" (default, Workers-compatible) or "ai-sdk" (Node only) */
     MCP_IMPL?: "raw" | "ai-sdk";
     /** Sandbox provider: "e2b", "cloudflare", or omit for stub */
@@ -19,5 +21,14 @@ export type AppEnv = {
     OLLAMA_BASE_URL?: string;
     /** CF Workers AI binding — required for cloud guardrail tier */
     AI: Ai;
+    /** Clerk secret key — enables auth when set */
+    CLERK_SECRET_KEY?: string;
+    /** Clerk publishable key — required alongside CLERK_SECRET_KEY */
+    CLERK_PUBLISHABLE_KEY?: string;
+    /** Comma-separated origins allowed as the Clerk token `azp` (e.g. "https://chatbot.course-projects.ai-web.dev") */
+    CLERK_AUTHORIZED_PARTIES?: string;
+  };
+  Variables: {
+    userId: string | null;
   };
 };
