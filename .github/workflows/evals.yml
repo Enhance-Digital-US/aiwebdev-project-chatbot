@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "packages/backend/**"
+      - "packages/frontend/**"
       - "packages/evals/**"
 
 jobs:
@@ -15,9 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
+      - uses: pnpm/action-setup@v4  # version from root package.json "packageManager"
 
       - uses: actions/setup-node@v4
         with:
@@ -27,8 +26,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build backend
-        run: pnpm --filter backend build
+      # Backend dry-run bundles ../frontend/dist as static assets, so build frontend first
+      - name: Build frontend + backend
+        run: pnpm run build
 
       - name: Write backend dev vars
         run: |

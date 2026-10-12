@@ -2,10 +2,10 @@
   "name": "evals",
   "private": true,
   "scripts": {
-    "eval": "promptfoo eval",
-    "eval:safety": "promptfoo eval --filter-pattern 'safety'",
-    "eval:quality": "promptfoo eval --filter-pattern 'quality'",
-    "eval:tools": "promptfoo eval --filter-pattern 'tools'",
+    "eval": "promptfoo eval --env-file .env",
+    "eval:safety": "promptfoo eval --env-file .env --filter-pattern 'safety'",
+    "eval:quality": "promptfoo eval --env-file .env --filter-pattern 'quality'",
+    "eval:tools": "promptfoo eval --env-file .env --filter-pattern 'tools'",
     "eval:view": "promptfoo view",
     "eval:braintrust": "npx tsx scripts/braintrust-eval.ts",
     "eval:langfuse": "npx tsx scripts/langfuse-evals.ts"

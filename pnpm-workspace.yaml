@@ -1,2 +1,11 @@
 packages:
   - "packages/*"
+allowBuilds:
+  '@playwright/browser-chromium': false
+  '@swc/core': false
+  braintrust: false
+  esbuild: true
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: true
+  workerd: true
