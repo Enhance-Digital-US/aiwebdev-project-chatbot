@@ -1,18 +1,48 @@
 {
-  "name": "chatbot-api",
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "chatbot",
   "main": "src/index.ts",
-  "compatibility_date": "2025-01-01",
+  "compatibility_date": "2026-07-21",
   "compatibility_flags": ["nodejs_compat"],
+
+  // Workers Custom Domain: wrangler deploy creates the DNS record and a per-host
+  // certificate (covers this 2-level subdomain; no Advanced Certificate Manager needed).
+  "routes": [
+    { "pattern": "chatbot.course-projects.ai-web.dev", "custom_domain": true }
+  ],
+  // Keep workers.dev on as a fallback until the custom domain is verified (spec D8).
+  // Explicit, because Wrangler's default may change once routes are configured. Task 6 flips this.
+  "workers_dev": true,
+
+  // Single-Worker deployment: the Vite build is served as static assets and
+  // only /api/* reaches the Hono app. Everything else falls back to index.html
+  // so TanStack Router can handle client-side routes.
+  // Build the frontend first (`pnpm build` at the root does this).
+  "assets": {
+    "directory": "../frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
 
   "vars": {
     "MCP_IMPL": "raw",
     // Set to "e2b" or "cloudflare" to enable real sandbox execution (default: stub)
-    "SANDBOX_PROVIDER": "e2b"
+    // "e2b" requires the E2B_API_KEY secret.
+    "SANDBOX_PROVIDER": "e2b",
+    // "local" cannot work when deployed (no Ollama at the edge). .dev.vars overrides this locally.
+    "GUARDRAIL_TIER": "simple",
+    // Clerk token `azp` allow-list (only used when CLERK_SECRET_KEY is set). .dev.vars overrides locally.
+    "CLERK_AUTHORIZED_PARTIES": "https://chatbot.course-projects.ai-web.dev"
   },
 
   // Workers AI binding for cloud guardrail tier (Llama Guard)
   "ai": {
     "binding": "AI"
+  },
+
+  "observability": {
+    "enabled": true
   },
 
   "rules": [
@@ -22,4 +52,8 @@
       "fallthrough": true
     }
   ]
+
+  // Secrets (set with `wrangler secret put <NAME>`, never commit):
+  //   OPENAI_API_KEY, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY,
+  //   E2B_API_KEY, CLERK_SECRET_KEY, CLERK_PUBLISHABLE_KEY
 }

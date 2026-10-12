@@ -18,20 +18,19 @@ const models: Record<string, ModelConfig> = {
     telemetryId: "openai-chat",
   },
   "gemma4:12b": {
-    createModel: () =>
-      createOllama({ baseURL: "http://localhost:11434/api" })("gemma4:12b"),
+    // Local-only: needs a reachable Ollama server (not available when deployed)
+    createModel: (env) =>
+      createOllama({
+        baseURL: `${env.OLLAMA_BASE_URL ?? "http://localhost:11434"}/api`,
+      })("gemma4:12b"),
     providerOptions: { ollama: { think: true } },
     sendReasoning: true,
     telemetryId: "ollama-chat",
   },
 };
 
-export function getModel(modelId: string): ModelConfig {
-  const config = models[modelId];
-  if (!config) {
-    throw new Error(`Unknown model: ${modelId}`);
-  }
-  return config;
+export function getModel(modelId: string): ModelConfig | undefined {
+  return Object.hasOwn(models, modelId) ? models[modelId] : undefined;
 }
 
 export const availableModels = Object.keys(models);
