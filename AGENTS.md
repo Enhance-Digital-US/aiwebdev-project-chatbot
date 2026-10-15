@@ -84,11 +84,15 @@ Selected via `GUARDRAIL_TIER` env var. Streaming uses sentence-level buffering �
 
 OpenTelemetry → Langfuse via custom `LangfuseFetchExporter` (Workers-compatible `fetch()` instead of Node `http`). Uses `@ai-sdk/otel` for automatic `gen_ai.*` span instrumentation. `SimpleSpanProcessor` (not Batch) because Workers are short-lived. Flush happens in each route's `streamText({ onEnd })` callback via `waitUntil`.
 
-Langfuse **sessions** and **users** are supported via `enrichSpan` + `runtimeContext`. The chat route passes the `chatId` (from `useChat`) as `langfuse.session.id` and the Clerk `userId` (if authenticated) as `langfuse.user.id` on every span. Auth is optional — traces without a signed-in user simply omit the user attribute.
+Langfuse **sessions** and **users** are supported via `enrichSpan` + `runtimeContext`. The chat route passes the `chatId` (from `useChat`) as `langfuse.session.id` and the Cloudflare Access user (email, else `sub`, from the verified `Cf-Access-Jwt-Assertion` JWT, see `auth/access.ts`) as `langfuse.user.id` on every span. Requests without that header (local dev, evals) omit the user attribute.
+
+### Auth
+
+Login is enforced at the edge by **Cloudflare Zero Trust Access** (Clerk as the OIDC identity provider), not in the app. The Worker only *reads* identity from the Access JWT for tracing, verifying it against `ACCESS_TEAM_DOMAIN` (issuer + JWKS) and `ACCESS_AUD`. `workers_dev` and `preview_urls` are disabled because those hostnames would bypass Access.
 
 ## Frontend (`packages/frontend/src/`)
 
-TanStack Router with routes in `src/routes/`. AI Elements components in `src/components/ai-elements/` (owned source, shadcn model). `useChat` from `@ai-sdk/react` manages all chat state. Optional Clerk auth (`@clerk/react`) wraps the app when `VITE_CLERK_PUBLISHABLE_KEY` is set — provides sign-in UI and forwards session tokens to the backend.
+TanStack Router with routes in `src/routes/`. AI Elements components in `src/components/ai-elements/` (owned source, shadcn model). `useChat` from `@ai-sdk/react` manages all chat state. No auth code: Cloudflare Access handles sign-in before the SPA loads, and its session cookie rides along on same-origin `/api` calls.
 
 Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools).
 
@@ -135,10 +139,8 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local de
 | `CHATBOT_URL` | No | Eval provider target (default: `http://localhost:8787`) |
 | `PROMPTFOO_GRADER_MODEL` | No | LLM-as-judge model (default: `openai:gpt-4o-mini`) |
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
-| `CLERK_SECRET_KEY` | No | Clerk auth — enables user tracking in Langfuse |
-| `CLERK_PUBLISHABLE_KEY` | No | Clerk auth — required alongside `CLERK_SECRET_KEY` |
-| `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated origins allowed as Clerk token `azp` (prod in `wrangler.jsonc`, `http://localhost:5173` in `.dev.vars`) |
-| `VITE_CLERK_PUBLISHABLE_KEY` | No | Frontend Clerk auth — inlined at **build time** (frontend `.env.production`); `pk_live_` needs a custom domain |
+| `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |
+| `ACCESS_AUD` | No | Cloudflare Access application AUD tag, set in `wrangler.jsonc` `vars`; both needed for Langfuse user ids |
 
 ## Local Prerequisites
 

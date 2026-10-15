@@ -1,3 +1,5 @@
+> **Superseded in part (2026-10-15):** Clerk tasks (authorized-parties parser, Task 7 Clerk production instance, `--expect-clerk`) were dropped. Auth now runs at the edge through Cloudflare Access; see the addendum in `specs/2026-10-07-workers-deployment-design.md`.
+
 # Cloudflare Workers Deployment Implementation Plan
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

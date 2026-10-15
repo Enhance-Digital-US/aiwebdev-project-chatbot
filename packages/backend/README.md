@@ -90,15 +90,11 @@ npx wrangler secret put LANGFUSE_SECRET_KEY
 # Required while SANDBOX_PROVIDER="e2b" (otherwise executeCode returns an error):
 npx wrangler secret put E2B_API_KEY
 
-# Optional — Clerk auth (user tracking in Langfuse):
-npx wrangler secret put CLERK_SECRET_KEY
-npx wrangler secret put CLERK_PUBLISHABLE_KEY
-
 # Optional — only if your Langfuse project is not in the US region:
 npx wrangler secret put LANGFUSE_BASE_URL   # e.g. https://cloud.langfuse.com
 ```
 
-Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`) is set via `vars` in `wrangler.jsonc`. `.dev.vars` is **not** uploaded on deploy.
+Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) is set via `vars` in `wrangler.jsonc`. `.dev.vars` is **not** uploaded on deploy.
 
 To verify secrets are set:
 
@@ -121,7 +117,8 @@ The app ships as a **single Worker**: the Vite build in `packages/frontend/dist`
 
 Key points:
 - **`assets`** — static files are served without invoking the Worker (free, no CPU time). Unknown paths fall back to `index.html` so client-side routes work on refresh. `run_worker_first` sends `/api/*` to Hono even if an asset path matches.
-- **Same origin** — frontend and API share a hostname, so no CORS config is needed and Clerk session cookies/tokens just work.
+- **Same origin** — frontend and API share a hostname, so no CORS config is needed and the Cloudflare Access session cookie covers both.
+- **`workers_dev: false` / `preview_urls: false`** — the custom domain is the only public origin. Access protects that hostname; a `*.workers.dev` or preview URL would bypass login.
 - **`nodejs_compat`** is required — the OTel packages use Node APIs (`Buffer`, `process.hrtime`) that this flag polyfills in Workers.
 - **`compatibility_date`** — must not exceed what the installed Wrangler's `workerd` supports (`wrangler dev` errors if it does). Bump it alongside Wrangler upgrades.
 - **`ai` binding** — provides the `AI` binding for the `cloud` guardrail tier (Llama Guard via Workers AI).
@@ -129,18 +126,13 @@ Key points:
 - **`rules`** — the `Text` rule for `**/*.md` enables raw-importing SKILL.md files at build time.
 - **`observability.enabled`** turns on Workers Logs only. There is deliberately no `observability.traces` — Workers native tracing creates a separate trace tree from `@opentelemetry/api`, which would send Langfuse disconnected duplicate traces.
 
-### Step 4: Configure frontend auth (optional)
+### Step 4: Authentication (Cloudflare Access)
 
-`VITE_CLERK_PUBLISHABLE_KEY` is inlined by Vite at **build time** — setting it as a Worker secret does nothing. Put it in `packages/frontend/.env.production` (publishable keys are public, so committing this file is fine) before building. See `packages/frontend/.env.example`.
+Login is enforced **outside the app** by a [Cloudflare Access](https://developers.cloudflare.com/cloudflare-one/policies/access/) self-hosted application on `chatbot.course-projects.ai-web.dev`, with Clerk configured as an OIDC identity provider in Zero Trust. Unauthenticated requests (including `/api/*`) get a 302 to `enhancedigital.cloudflareaccess.com` before they reach the Worker. The app has no auth code or keys of its own.
 
-- **Clerk development instance (`pk_test_…`)** works on `*.workers.dev`.
-- **Clerk production instance (`pk_live_…`)** requires a domain you own (Clerk needs DNS records), so attach a [custom domain](https://developers.cloudflare.com/workers/configuration/routing/custom-domains/) to the Worker first.
+For tracing, the Worker reads the user from the signed `Cf-Access-Jwt-Assertion` header that Access adds (`src/auth/access.ts`). It verifies the JWT against the team's JWKS (`<ACCESS_TEAM_DOMAIN>/cdn-cgi/access/certs`), issuer `ACCESS_TEAM_DOMAIN`, and audience `ACCESS_AUD` (the Access application's AUD tag). It then sets `langfuse.user.id` to the `email` claim, falling back to `sub`. A missing or invalid token leaves the request anonymous. Local dev and evals send no header, so their traces omit the user.
 
-Without the key the app runs unauthenticated, and traces simply omit `langfuse.user.id`.
-
-> **Token origin check:** `CLERK_AUTHORIZED_PARTIES` (comma-separated origins) is passed to Clerk as `authorizedParties`, so tokens minted for other sites on the same Clerk instance are rejected. Production value lives in `wrangler.jsonc`; set `CLERK_AUTHORIZED_PARTIES=http://localhost:5173` in `.dev.vars` for local dev (the Vite proxy means the browser origin is `:5173`, not `:8787`). A malformed entry makes `/api/*` return 500 rather than silently de-authenticating users.
->
-> Auth currently only **tags** traces; it does not gate `/api/chat`. Anyone with the URL can use the chatbot (and your OpenAI credits).
+> If the Access application is recreated, its AUD tag changes: update `ACCESS_AUD` in `wrangler.jsonc` (Zero Trust → Access → Applications → the app → Overview → Application Audience (AUD) Tag).
 
 ### Step 5: Deploy
 
@@ -157,7 +149,6 @@ Wrangler outputs the production URL:
 ```
 Uploaded chatbot (x.xx sec)
 Deployed chatbot triggers (x.xx sec)
-  https://chatbot.enhancedigital.workers.dev
   chatbot.course-projects.ai-web.dev (custom domain)
 ```
 

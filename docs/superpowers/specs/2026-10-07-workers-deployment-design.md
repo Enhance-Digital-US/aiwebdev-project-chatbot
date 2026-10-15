@@ -38,3 +38,12 @@ Single-Worker `assets` config, compat date `2026-07-21` (max supported by pinned
 - Gating `/api/chat` behind sign-in (auth only tags Langfuse traces).
 - A `course-projects.ai-web.dev` landing/index Worker.
 - The 4 pre-existing AI SDK v7 type errors in `tsc --noEmit`.
+
+## Addendum (2026-10-15): Auth moved to Cloudflare Access
+
+In-app Clerk auth was replaced by edge auth. This supersedes D5–D7 and completes D8:
+
+- **Enforcement:** a Cloudflare Zero Trust Access self-hosted application on `chatbot.course-projects.ai-web.dev` (team `enhancedigital`) gates every path, `/api/*` included, with Clerk configured as an OIDC identity provider. Unlike the old design ("auth only tags traces"), `/api/chat` is now actually gated.
+- **Removed:** `@clerk/react`, `@clerk/backend`, `auth.tsx`, `authorized-parties.ts`, `CLERK_*` bindings/secrets, `VITE_CLERK_PUBLISHABLE_KEY`, frontend `.env.example`. No Clerk production instance or Clerk DNS records are needed for the app.
+- **User tracing:** the Worker verifies the `Cf-Access-Jwt-Assertion` JWT (`jose`, remote JWKS at `<team>/cdn-cgi/access/certs`, issuer `ACCESS_TEAM_DOMAIN`, audience `ACCESS_AUD`) and sets `langfuse.user.id` to `email` (fallback `sub`). Verification failures are logged and leave the request anonymous, since Access has already enforced login.
+- **D8 done:** `workers_dev: false`, `preview_urls: false`. Access covers only the custom hostname, so those URLs would have been unauthenticated entry points.
