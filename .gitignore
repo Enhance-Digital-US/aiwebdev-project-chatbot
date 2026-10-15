@@ -37,3 +37,6 @@ yarn-error.log*
 *.swp
 .DS_Store
 Thumbs.db
+
+# Wrangler bulk-secret input files (contain real secret values)
+secrets.json
