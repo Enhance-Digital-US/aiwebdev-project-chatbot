@@ -47,8 +47,7 @@ import {
   SandboxTabs,
 } from "@/components/ai-elements/sandbox";
 import { MessageSquareIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { useAuthToken } from "@/auth";
+import { useEffect, useState } from "react";
 import {
   Tool as ToolDisplay,
   ToolContent,
@@ -91,6 +90,10 @@ function ToolInvocation({ part }: { part: ToolPart }) {
   );
 }
 
+// Same-origin request: the Cloudflare Access session cookie goes along
+// automatically, so no auth header is needed.
+const transport = new DefaultChatTransport({ api: "/api/chat" });
+
 export const Route = createFileRoute("/")({
   component: ChatPage,
 });
@@ -98,20 +101,6 @@ export const Route = createFileRoute("/")({
 function ChatPage() {
   const [model, setModel] = useState(models[0].id);
   const [selectorOpen, setSelectorOpen] = useState(false);
-  const { getToken } = useAuthToken();
-
-  const transport = useMemo(
-    () =>
-      new DefaultChatTransport({
-        api: "/api/chat",
-        headers: async (): Promise<Record<string, string>> => {
-          const token = await getToken();
-          return token ? { Authorization: `Bearer ${token}` } : {};
-        },
-      }),
-    [getToken]
-  );
-
   const { messages, sendMessage, status } = useChat({ transport });
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];

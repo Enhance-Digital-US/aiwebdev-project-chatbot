@@ -1,8 +1,7 @@
 import type { Hono } from "hono";
-import { createClerkClient } from "@clerk/backend";
 import type { AppEnv } from "./types";
 import { initTelemetry } from "./telemetry";
-import { parseAuthorizedParties } from "./auth/authorized-parties";
+import { ACCESS_JWT_HEADER, verifyAccessUser } from "./auth/access";
 
 // No CORS middleware: the frontend is served from the same Worker (static
 // assets) in production and through the Vite proxy in dev, so /api/* is
@@ -18,21 +17,19 @@ export function registerMiddleware(app: Hono<AppEnv>) {
 
     c.set("userId", null);
 
-    if (c.env.CLERK_SECRET_KEY) {
-      // Outside the try: a malformed allow-list is a deploy bug and must surface as a 500,
-      // not be swallowed into "anonymous".
-      const authorizedParties = parseAuthorizedParties(c.env.CLERK_AUTHORIZED_PARTIES);
+    // Login is enforced by Cloudflare Access before the request reaches the
+    // Worker; here we only identify the user for tracing. No header (local dev,
+    // evals) → anonymous, with no JWKS fetch.
+    const token = c.req.header(ACCESS_JWT_HEADER);
+    if (token && c.env.ACCESS_TEAM_DOMAIN && c.env.ACCESS_AUD) {
       try {
-        const clerk = createClerkClient({
-          secretKey: c.env.CLERK_SECRET_KEY,
-          publishableKey: c.env.CLERK_PUBLISHABLE_KEY,
+        const userId = await verifyAccessUser(token, {
+          teamDomain: c.env.ACCESS_TEAM_DOMAIN,
+          audience: c.env.ACCESS_AUD,
         });
-        const requestState = await clerk.authenticateRequest(c.req.raw, { authorizedParties });
-        if (requestState.isAuthenticated) {
-          c.set("userId", requestState.toAuth().userId);
-        }
+        c.set("userId", userId);
       } catch (err) {
-        console.warn("Clerk auth failed, continuing as unauthenticated:", err);
+        console.warn("Access JWT verification failed, continuing as anonymous:", err);
       }
     }
 

@@ -21,12 +21,10 @@ export type AppEnv = {
     OLLAMA_BASE_URL?: string;
     /** CF Workers AI binding — required for cloud guardrail tier */
     AI: Ai;
-    /** Clerk secret key — enables auth when set */
-    CLERK_SECRET_KEY?: string;
-    /** Clerk publishable key — required alongside CLERK_SECRET_KEY */
-    CLERK_PUBLISHABLE_KEY?: string;
-    /** Comma-separated origins allowed as the Clerk token `azp` (e.g. "https://chatbot.course-projects.ai-web.dev") */
-    CLERK_AUTHORIZED_PARTIES?: string;
+    /** Cloudflare Access team domain, the Access JWT `iss` (e.g. "https://enhancedigital.cloudflareaccess.com") */
+    ACCESS_TEAM_DOMAIN?: string;
+    /** Cloudflare Access application AUD tag, the Access JWT `aud` */
+    ACCESS_AUD?: string;
   };
   Variables: {
     userId: string | null;
