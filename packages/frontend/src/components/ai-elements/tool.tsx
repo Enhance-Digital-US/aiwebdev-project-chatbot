@@ -2,15 +2,24 @@
 
 import { Badge } from "@/components/ui/badge";
 import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+  CodeBlock,
+  CodeBlockContent,
+  CodeBlockLine,
+} from "@/components/ui/code-block";
+import {
+  Trace,
+  TraceCollapsible,
+  TraceCollapsibleContent,
+  TraceCollapsibleTrigger,
+  TraceIcon,
+  TraceLine,
+  TraceTitle,
+} from "@/components/ui/trace";
+import { useHighlightedCode } from "@/hooks/use-highlighted-code";
 import { cn } from "@/lib/utils";
 import type { DynamicToolUIPart, ToolUIPart } from "ai";
 import {
   CheckCircleIcon,
-  ChevronDownIcon,
   CircleIcon,
   ClockIcon,
   WrenchIcon,
@@ -19,15 +28,13 @@ import {
 import type { ComponentProps, ReactNode } from "react";
 import { isValidElement } from "react";
 
-import { CodeBlock } from "./code-block";
+export type ToolProps = ComponentProps<typeof TraceCollapsible>;
 
-export type ToolProps = ComponentProps<typeof Collapsible>;
-
+// Trace is the list container; open/onOpenChange belong to the collapsible.
 export const Tool = ({ className, ...props }: ToolProps) => (
-  <Collapsible
-    className={cn("group not-prose mb-4 w-full rounded-md border", className)}
-    {...props}
-  />
+  <Trace className={cn("not-prose mb-4", className)}>
+    <TraceCollapsible {...props} />
+  </Trace>
 );
 
 export type ToolPart = ToolUIPart | DynamicToolUIPart;
@@ -71,46 +78,79 @@ export const getStatusBadge = (status: ToolPart["state"]) => (
   </Badge>
 );
 
+const getTraceLine = (
+  state: ToolPart["state"],
+  name: string
+): { status?: "running" | "error" | "pending"; title: string } => {
+  switch (state) {
+    case "input-streaming":
+    case "input-available":
+      return { status: "running", title: `Running ${name}` };
+    case "output-available":
+      return { title: `Ran ${name}` };
+    case "output-error":
+      return { status: "error", title: `Failed to run ${name}` };
+    case "output-denied":
+      return { status: "error", title: `Denied ${name}` };
+    case "approval-requested":
+    case "approval-responded":
+      return { status: "pending", title: `Waiting to run ${name}` };
+  }
+};
+
 export const ToolHeader = ({
   className,
   title,
   type,
   state,
   toolName,
-  ...props
 }: ToolHeaderProps) => {
   const derivedName =
     type === "dynamic-tool" ? toolName : type.split("-").slice(1).join("-");
+  const line = getTraceLine(state, title ?? derivedName);
 
   return (
-    <CollapsibleTrigger
-      className={cn(
-        "flex w-full items-center justify-between gap-4 p-3",
-        className
-      )}
-      {...props}
-    >
-      <div className="flex items-center gap-2">
-        <WrenchIcon className="size-4 text-muted-foreground" />
-        <span className="font-medium text-sm">{title ?? derivedName}</span>
-        {getStatusBadge(state)}
-      </div>
-      <ChevronDownIcon className="size-4 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
-    </CollapsibleTrigger>
+    <TraceCollapsibleTrigger className={className}>
+      <TraceLine status={line.status}>
+        <TraceIcon>
+          <WrenchIcon />
+        </TraceIcon>
+        <TraceTitle>{line.title}</TraceTitle>
+      </TraceLine>
+    </TraceCollapsibleTrigger>
   );
 };
 
-export type ToolContentProps = ComponentProps<typeof CollapsibleContent>;
+export type ToolContentProps = ComponentProps<typeof TraceCollapsibleContent>;
 
 export const ToolContent = ({ className, ...props }: ToolContentProps) => (
-  <CollapsibleContent
-    className={cn(
-      "data-[state=closed]:fade-out-0 data-[state=closed]:slide-out-to-top-2 data-[state=open]:slide-in-from-top-2 space-y-4 p-4 text-popover-foreground outline-none data-[state=closed]:animate-out data-[state=open]:animate-in",
-      className
-    )}
+  <TraceCollapsibleContent
+    className={cn("space-y-4", className)}
     {...props}
   />
 );
+
+const HighlightedCode = ({
+  code,
+  language,
+  variant,
+}: {
+  code: string;
+  language: string;
+  variant?: "default" | "destructive";
+}) => {
+  const lines = useHighlightedCode(code, language);
+
+  return (
+    <CodeBlock size="sm" variant={variant}>
+      <CodeBlockContent wrap className="max-h-64">
+        {lines.map((line, index) => (
+          <CodeBlockLine key={index}>{line}</CodeBlockLine>
+        ))}
+      </CodeBlockContent>
+    </CodeBlock>
+  );
+};
 
 export type ToolInputProps = ComponentProps<"div"> & {
   input: ToolPart["input"];
@@ -123,9 +163,7 @@ export const ToolInput = ({ className, input, ...props }: ToolInputProps) => {
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         Parameters
       </h4>
-      <div className="rounded-md bg-muted/50">
-        <CodeBlock code={JSON.stringify(input, null, 2)} language="json" />
-      </div>
+      <HighlightedCode code={JSON.stringify(input, null, 2)} language="json" />
     </div>
   );
 };
@@ -147,12 +185,16 @@ export const ToolOutput = ({
 
   let Output = <div>{output as ReactNode}</div>;
 
-  if (typeof output === "object" && !isValidElement(output)) {
+  if (errorText) {
     Output = (
-      <CodeBlock code={JSON.stringify(output, null, 2)} language="json" />
+      <HighlightedCode code={errorText} language="text" variant="destructive" />
+    );
+  } else if (typeof output === "object" && !isValidElement(output)) {
+    Output = (
+      <HighlightedCode code={JSON.stringify(output, null, 2)} language="json" />
     );
   } else if (typeof output === "string") {
-    Output = <CodeBlock code={output} language="json" />;
+    Output = <HighlightedCode code={output} language="json" />;
   }
 
   return (
@@ -160,17 +202,7 @@ export const ToolOutput = ({
       <h4 className="font-medium text-muted-foreground text-xs uppercase tracking-wide">
         {errorText ? "Error" : "Result"}
       </h4>
-      <div
-        className={cn(
-          "overflow-x-auto rounded-md text-xs [&_table]:w-full",
-          errorText
-            ? "bg-destructive/10 text-destructive"
-            : "bg-muted/50 text-foreground"
-        )}
-      >
-        {errorText && <div>{errorText}</div>}
-        {Output}
-      </div>
+      {Output}
     </div>
   );
 };

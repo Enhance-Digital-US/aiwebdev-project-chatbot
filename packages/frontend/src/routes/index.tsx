@@ -30,9 +30,7 @@ import {
 import {
   ModelSelector,
   ModelSelectorContent,
-  ModelSelectorEmpty,
   ModelSelectorGroup,
-  ModelSelectorInput,
   ModelSelectorItem,
   ModelSelectorList,
   ModelSelectorLogo,
@@ -40,6 +38,7 @@ import {
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
 import type { ToolPart } from "@/components/ai-elements/tool";
+import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import {
   Sandbox,
   SandboxContent,
@@ -100,7 +99,6 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const [model, setModel] = useState(models[0].id);
-  const [selectorOpen, setSelectorOpen] = useState(false);
   const { messages, sendMessage, status } = useChat({ transport });
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];
@@ -110,73 +108,85 @@ function ChatPage() {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      <Conversation className="flex-1">
-        <ConversationContent>
+    <div className="flex-1 flex flex-col min-h-0">
+      <Conversation className="flex-1 min-h-0">
+        {/* pr-16 keeps user bubbles clear of the floating download button */}
+        <ConversationContent className="pr-16">
           {messages.length === 0 ? (
             <ConversationEmptyState
+              className="flex-1"
               title="What can I help you with?"
               description="Ask me anything — I can search docs, explain concepts, and help you architect solutions."
               icon={<MessageSquareIcon className="size-8" />}
             />
           ) : (
             messages.map((message) => (
-              <Message key={message.id} from={message.role}>
-                <MessageContent>
-                  {message.parts.map((part, i) => {
-                    if (part.type === "reasoning") {
-                      return (
-                        <Reasoning
-                          key={i}
-                          isStreaming={part.state === "streaming"}
-                        >
-                          <ReasoningTrigger />
-                          <ReasoningContent>{part.text}</ReasoningContent>
-                        </Reasoning>
-                      );
-                    }
-                    if (part.type === "text") {
-                      return (
-                        <MessageResponse key={i}>{part.text}</MessageResponse>
-                      );
-                    }
-                    if (part.type === "tool-executeCode") {
-                      const input = (part.input ?? {}) as {
-                        code?: string;
-                        language?: string;
-                      };
-                      const output = part.state === "output-available"
-                        ? (part.output as {
-                            stdout?: string;
-                            stderr?: string;
-                          })
-                        : undefined;
-                      return (
-                        <Sandbox key={i}>
-                          <SandboxHeader
-                            title={input.language === "python" ? "Python" : "JavaScript"}
-                            state={part.state as "input-streaming" | "input-available" | "output-available" | "output-error"}
-                          />
-                          <SandboxContent>
-                            <SandboxTabs
-                              code={input.code ?? ""}
-                              language={input.language ?? "javascript"}
-                              output={output?.stdout}
-                              stderr={output?.stderr}
+              <MessageScrollerItem
+                key={message.id}
+                messageId={message.id}
+                scrollAnchor={message.role === "user"}
+              >
+                <Message from={message.role}>
+                  <MessageContent>
+                    {message.parts.map((part, i) => {
+                      if (part.type === "reasoning") {
+                        return (
+                          <Reasoning
+                            key={i}
+                            isStreaming={part.state === "streaming"}
+                          >
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text}</ReasoningContent>
+                          </Reasoning>
+                        );
+                      }
+                      if (part.type === "text") {
+                        return (
+                          <MessageResponse key={i}>{part.text}</MessageResponse>
+                        );
+                      }
+                      if (part.type === "tool-executeCode") {
+                        const input = (part.input ?? {}) as {
+                          code?: string;
+                          language?: string;
+                        };
+                        const output = part.state === "output-available"
+                          ? (part.output as {
+                              stdout?: string;
+                              stderr?: string;
+                            })
+                          : undefined;
+                        return (
+                          <Sandbox key={i}>
+                            <SandboxHeader
+                              title={input.language === "python" ? "Python" : "JavaScript"}
+                              state={part.state as "input-streaming" | "input-available" | "output-available" | "output-error"}
                             />
-                          </SandboxContent>
-                        </Sandbox>
-                      );
-                    }
-                    if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
-                      return (
-                        <ToolInvocation key={i} part={part as ToolPart} />
-                      );
-                    }
-                    return null;
-                  })}
-                </MessageContent>
-              </Message>
+                            <SandboxContent>
+                              <SandboxTabs
+                                code={input.code ?? ""}
+                                language={input.language ?? "javascript"}
+                                output={output?.stdout}
+                                stderr={output?.stderr}
+                                isComplete={
+                                  part.state === "output-available" ||
+                                  part.state === "output-error"
+                                }
+                              />
+                            </SandboxContent>
+                          </Sandbox>
+                        );
+                      }
+                      if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
+                        return (
+                          <ToolInvocation key={i} part={part as ToolPart} />
+                        );
+                      }
+                      return null;
+                    })}
+                  </MessageContent>
+                </Message>
+              </MessageScrollerItem>
             ))
           )}
         </ConversationContent>
@@ -193,11 +203,8 @@ function ChatPage() {
           </PromptInputBody>
           <PromptInputFooter>
             <PromptInputTools>
-              <ModelSelector
-                open={selectorOpen}
-                onOpenChange={setSelectorOpen}
-              >
-                <ModelSelectorTrigger asChild>
+              <ModelSelector>
+                <ModelSelectorTrigger>
                   <button
                     type="button"
                     className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
@@ -207,25 +214,16 @@ function ChatPage() {
                   </button>
                 </ModelSelectorTrigger>
                 <ModelSelectorContent>
-                  <ModelSelectorInput placeholder="Search models..." />
-                  <ModelSelectorList>
-                    <ModelSelectorEmpty>No models found.</ModelSelectorEmpty>
-                    <ModelSelectorGroup heading="Models">
+                  <ModelSelectorGroup heading="Models">
+                    <ModelSelectorList value={model} onValueChange={setModel}>
                       {models.map((m) => (
-                        <ModelSelectorItem
-                          key={m.id}
-                          value={m.id}
-                          onSelect={() => {
-                            setModel(m.id);
-                            setSelectorOpen(false);
-                          }}
-                        >
+                        <ModelSelectorItem key={m.id} value={m.id}>
                           <ModelSelectorLogo provider={m.provider} />
                           <ModelSelectorName>{m.name}</ModelSelectorName>
                         </ModelSelectorItem>
                       ))}
-                    </ModelSelectorGroup>
-                  </ModelSelectorList>
+                    </ModelSelectorList>
+                  </ModelSelectorGroup>
                 </ModelSelectorContent>
               </ModelSelector>
             </PromptInputTools>

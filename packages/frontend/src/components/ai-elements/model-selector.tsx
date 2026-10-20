@@ -1,60 +1,57 @@
 import {
-  Command,
   CommandDialog,
   CommandEmpty,
-  CommandGroup,
   CommandInput,
-  CommandItem,
-  CommandList,
-  CommandSeparator,
-  CommandShortcut,
 } from "@/components/ui/command";
 import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 import type { ComponentProps, ReactNode } from "react";
 
-export type ModelSelectorProps = ComponentProps<typeof Dialog>;
+export type ModelSelectorProps = ComponentProps<typeof DropdownMenu>;
 
 export const ModelSelector = (props: ModelSelectorProps) => (
-  <Dialog {...props} />
+  <DropdownMenu {...props} />
 );
 
-export type ModelSelectorTriggerProps = ComponentProps<typeof DialogTrigger>;
+export type ModelSelectorTriggerProps = ComponentProps<
+  typeof DropdownMenuTrigger
+>;
 
 export const ModelSelectorTrigger = (props: ModelSelectorTriggerProps) => (
-  <DialogTrigger {...props} />
+  <DropdownMenuTrigger asChild {...props} />
 );
 
-export type ModelSelectorContentProps = ComponentProps<typeof DialogContent> & {
+export type ModelSelectorContentProps = ComponentProps<
+  typeof DropdownMenuContent
+> & {
   title?: ReactNode;
 };
 
 export const ModelSelectorContent = ({
   className,
-  children,
   title = "Model Selector",
   ...props
 }: ModelSelectorContentProps) => (
-  <DialogContent
-    aria-describedby={undefined}
-    className={cn(
-      "outline! border-none! p-0 outline-border! outline-solid!",
-      className
-    )}
+  <DropdownMenuContent
+    align="start"
+    aria-label={typeof title === "string" ? title : undefined}
+    className={cn("min-w-56", className)}
     {...props}
-  >
-    <DialogTitle className="sr-only">{title}</DialogTitle>
-    <Command className="**:data-[slot=command-input-wrapper]:h-auto">
-      {children}
-    </Command>
-  </DialogContent>
+  />
 );
 
+// A menu has no search field. These stay on Command for a searchable
+// palette (ModelSelectorDialog), and are not used inside ModelSelectorContent.
 export type ModelSelectorDialogProps = ComponentProps<typeof CommandDialog>;
 
 export const ModelSelectorDialog = (props: ModelSelectorDialogProps) => (
@@ -70,42 +67,62 @@ export const ModelSelectorInput = ({
   <CommandInput className={cn("h-auto py-3.5", className)} {...props} />
 );
 
-export type ModelSelectorListProps = ComponentProps<typeof CommandList>;
-
-export const ModelSelectorList = (props: ModelSelectorListProps) => (
-  <CommandList {...props} />
-);
-
 export type ModelSelectorEmptyProps = ComponentProps<typeof CommandEmpty>;
 
 export const ModelSelectorEmpty = (props: ModelSelectorEmptyProps) => (
   <CommandEmpty {...props} />
 );
 
-export type ModelSelectorGroupProps = ComponentProps<typeof CommandGroup>;
+export type ModelSelectorListProps = ComponentProps<
+  typeof DropdownMenuRadioGroup
+>;
 
-export const ModelSelectorGroup = (props: ModelSelectorGroupProps) => (
-  <CommandGroup {...props} />
+export const ModelSelectorList = (props: ModelSelectorListProps) => (
+  <DropdownMenuRadioGroup {...props} />
 );
 
-export type ModelSelectorItemProps = ComponentProps<typeof CommandItem>;
+export type ModelSelectorGroupProps = ComponentProps<
+  typeof DropdownMenuGroup
+> & {
+  heading?: ReactNode;
+};
 
-export const ModelSelectorItem = (props: ModelSelectorItemProps) => (
-  <CommandItem {...props} />
+export const ModelSelectorGroup = ({
+  heading,
+  children,
+  ...props
+}: ModelSelectorGroupProps) => (
+  <DropdownMenuGroup {...props}>
+    {heading && <DropdownMenuLabel>{heading}</DropdownMenuLabel>}
+    {children}
+  </DropdownMenuGroup>
 );
 
-export type ModelSelectorShortcutProps = ComponentProps<typeof CommandShortcut>;
+export type ModelSelectorItemProps = ComponentProps<
+  typeof DropdownMenuRadioItem
+>;
+
+export const ModelSelectorItem = ({
+  className,
+  ...props
+}: ModelSelectorItemProps) => (
+  <DropdownMenuRadioItem className={cn("gap-2", className)} {...props} />
+);
+
+export type ModelSelectorShortcutProps = ComponentProps<
+  typeof DropdownMenuShortcut
+>;
 
 export const ModelSelectorShortcut = (props: ModelSelectorShortcutProps) => (
-  <CommandShortcut {...props} />
+  <DropdownMenuShortcut {...props} />
 );
 
 export type ModelSelectorSeparatorProps = ComponentProps<
-  typeof CommandSeparator
+  typeof DropdownMenuSeparator
 >;
 
 export const ModelSelectorSeparator = (props: ModelSelectorSeparatorProps) => (
-  <CommandSeparator {...props} />
+  <DropdownMenuSeparator {...props} />
 );
 
 export type ModelSelectorLogoProps = Omit<
