@@ -4,7 +4,7 @@
 
 AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a single Worker (Hono API + frontend via Workers Static Assets) at `https://chatbot.course-projects.ai-web.dev` (Workers Custom Domain).
 
-- **`packages/frontend`** — React 19 + Vite, TanStack Router, Tailwind CSS 4, shadcn/ui + AI Elements
+- **`packages/frontend`** — React 19 + Vite, TanStack Router, Tailwind CSS 4, shadcn/ui (radix-nova style, incl. its AI components)
 - **`packages/backend`** — Hono on Cloudflare Workers, AI SDK v7, OpenAI + Ollama providers
 - **`packages/evals`** — Promptfoo offline evals, Braintrust extension, Langfuse online scoring
 
@@ -92,7 +92,7 @@ Login is enforced at the edge by **Cloudflare Zero Trust Access** (Clerk as the 
 
 ## Frontend (`packages/frontend/src/`)
 
-TanStack Router with routes in `src/routes/`. AI Elements components in `src/components/ai-elements/` (owned source, shadcn model). `useChat` from `@ai-sdk/react` manages all chat state. No auth code: Cloudflare Access handles sign-in before the SPA loads, and its session cookie rides along on same-origin `/api` calls.
+TanStack Router with routes in `src/routes/`. Chat UI wrappers live in `src/components/ai-elements/`. They keep the old AI SDK Elements export names but are built on shadcn/ui primitives: Trace, Code Block, Message, Bubble, Message Scroller and Dropdown Menu, all in `src/components/ui/`. Add new pieces with `pnpm dlx shadcn@latest add <name>` (style `radix-nova`; see https://ui.shadcn.com/docs/ai-elements), not the deprecated `ai-elements` CLI. `src/app.css` imports `tw-animate-css` and `shadcn/tailwind.css`, which provide the `shimmer`, `data-open` and accordion utilities. `useChat` from `@ai-sdk/react` manages all chat state. No auth code: Cloudflare Access handles sign-in before the SPA loads, and its session cookie rides along on same-origin `/api` calls.
 
 Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools).
 
