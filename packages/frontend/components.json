@@ -1,6 +1,6 @@
 {
   "$schema": "https://ui.shadcn.com/schema.json",
-  "style": "default",
+  "style": "radix-nova",
   "rsc": false,
   "tsx": true,
   "aliases": {
@@ -15,5 +15,6 @@
     "css": "src/app.css",
     "baseColor": "neutral",
     "cssVariables": true
-  }
+  },
+  "iconLibrary": "lucide"
 }
