@@ -148,6 +148,11 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local de
 - **Ollama** on `:11434` — needed for `gemma4:12b` model and `GUARDRAIL_TIER=local`
 - Evals require the backend dev server running first (`pnpm dev` from root)
 
-## Design Specs
+## Specs (OpenSpec)
 
-Detailed design documents live in `docs/superpowers/specs/`. Consult these for architectural rationale and decision logs.
+Specs are managed with [OpenSpec](https://github.com/Fission-AI/OpenSpec) (`openspec` CLI, schema `spec-driven`).
+
+- **`openspec/specs/<capability>/spec.md`**: current behavior as requirements and scenarios. Capabilities: `chat-api`, `chat-ui`, `tools`, `mcp-client`, `skills`, `guardrails`, `telemetry`, `auth`, `deployment`, `evals`.
+- **`openspec/changes/archive/<date>-<name>/`**: past changes, each with `proposal.md`, `design.md` (architectural rationale and decision logs) and usually `tasks.md`. The pre-OpenSpec design docs and plans from `docs/superpowers/` were moved here. They are historical and may not match current code.
+
+New work goes through an OpenSpec change (`openspec/changes/<name>/` with a proposal, delta specs, design and tasks; `/opsx:propose`), not new files in `docs/superpowers/`. Archive it once it ships, so the main specs stay current. Check with `openspec validate --all --strict`.
