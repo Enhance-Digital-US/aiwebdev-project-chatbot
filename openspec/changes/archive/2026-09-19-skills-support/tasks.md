@@ -1,6 +1,6 @@
 # Skills Support Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add Agent Skills support so the model can load behavioral instructions on demand, complementing MCP's capability layer.
 
@@ -36,7 +36,7 @@
   - `skillBodies: Record<string, string>` — maps skill name → SKILL.md body content
   - `skillNames: [string, ...string[]]` — tuple of valid skill names for `z.enum()`
 
-- [ ] **Step 1: Add Wrangler text module rule**
+- [x] **Step 1: Add Wrangler text module rule**
 
 Add a `[[rules]]` block to `packages/backend/wrangler.toml` so Wrangler
 bundles `.md` files as text modules:
@@ -49,7 +49,7 @@ globs = ["**/*.md"]
 
 This makes `import content from "./foo/SKILL.md"` yield a `string` at build time.
 
-- [ ] **Step 2: Add TypeScript declaration for `.md` imports**
+- [x] **Step 2: Add TypeScript declaration for `.md` imports**
 
 Create `packages/backend/src/skills/types.d.ts`:
 
@@ -62,7 +62,7 @@ declare module "*.md" {
 
 This tells TypeScript that `.md` default imports are strings.
 
-- [ ] **Step 3: Create the eli5-explainer skill**
+- [x] **Step 3: Create the eli5-explainer skill**
 
 Create `packages/backend/src/skills/eli5-explainer/SKILL.md`:
 
@@ -109,7 +109,7 @@ subsequent responses in this conversation:
   wouldn't be asking.
 ```
 
-- [ ] **Step 4: Create the senior-architect skill**
+- [x] **Step 4: Create the senior-architect skill**
 
 Create `packages/backend/src/skills/senior-architect/SKILL.md`.
 
@@ -133,7 +133,7 @@ description: Responds as a production-focused full-stack web and GenAI architect
 - Production lens: failure modes, observability, graceful degradation, operational burden
 - Communication style: assume a technical audience, reference patterns by name (CQRS, circuit breakers, bulkheads), state what to avoid and why
 
-- [ ] **Step 5: Create the discovery module**
+- [x] **Step 5: Create the discovery module**
 
 Create `packages/backend/src/skills/discovery.ts`:
 
@@ -212,14 +212,14 @@ export function buildSkillsPrompt(): string {
 }
 ```
 
-- [ ] **Step 6: Verify the build works**
+- [x] **Step 6: Verify the build works**
 
 Run: `cd packages/backend && npx wrangler deploy --dry-run --outdir /tmp/skills-test`
 
 Expected: Build succeeds with no TypeScript or bundling errors. The `.md`
 files are bundled as text modules. Check the output confirms no errors.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/backend/wrangler.toml \
@@ -248,7 +248,7 @@ a catalog for system prompt injection and a body map for the loadSkill tool."
 - Produces:
   - `loadSkill` — an AI SDK `tool()` instance added to the chat tools object
 
-- [ ] **Step 1: Create the loadSkill tool**
+- [x] **Step 1: Create the loadSkill tool**
 
 Create `packages/backend/src/skills/load-skill.ts`:
 
@@ -276,7 +276,7 @@ export const loadSkill = tool({
 });
 ```
 
-- [ ] **Step 2: Create the barrel export**
+- [x] **Step 2: Create the barrel export**
 
 Create `packages/backend/src/skills/index.ts`:
 
@@ -285,7 +285,7 @@ export { loadSkill } from "./load-skill";
 export { buildSkillsPrompt } from "./discovery";
 ```
 
-- [ ] **Step 3: Integrate into the chat route**
+- [x] **Step 3: Integrate into the chat route**
 
 Modify `packages/backend/src/routes/chat.ts`. Two changes:
 
@@ -320,13 +320,13 @@ const result = streamText({
 });
 ```
 
-- [ ] **Step 4: Verify the build**
+- [x] **Step 4: Verify the build**
 
 Run: `cd packages/backend && npx wrangler deploy --dry-run --outdir /tmp/skills-test-2`
 
 Expected: Build succeeds. No type errors, no missing imports.
 
-- [ ] **Step 5: Manual end-to-end verification**
+- [x] **Step 5: Manual end-to-end verification**
 
 Start the dev server: `pnpm dev`
 
@@ -350,7 +350,7 @@ Test these scenarios in the browser:
    `loadSkill` and an MCP tool call, with the response framed through the
    architect's production lens.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/backend/src/skills/load-skill.ts \

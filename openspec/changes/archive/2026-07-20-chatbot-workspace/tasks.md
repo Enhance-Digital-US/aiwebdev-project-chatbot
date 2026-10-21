@@ -1,6 +1,6 @@
 # Chatbot Workspace Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Scaffold a pnpm monorepo with a React + Vite frontend and Hono API backend that implements a streaming chat UI using the Vercel AI SDK with AI Elements components, deployable to Cloudflare.
 
@@ -69,27 +69,27 @@
 **Interfaces:**
 - Produces: pnpm workspace root that subsequent tasks install into
 
-- [ ] **Step 1: Initialize git repo**
+- [x] **Step 1: Initialize git repo**
 
 ```bash
 cd /Users/kirittanna/projects/aiwebdev/course-projects/chatbot
 git init
 ```
 
-- [ ] **Step 2: Create `.nvmrc`**
+- [x] **Step 2: Create `.nvmrc`**
 
 ```
 22
 ```
 
-- [ ] **Step 3: Create `pnpm-workspace.yaml`**
+- [x] **Step 3: Create `pnpm-workspace.yaml`**
 
 ```yaml
 packages:
   - "packages/*"
 ```
 
-- [ ] **Step 4: Create root `package.json`**
+- [x] **Step 4: Create root `package.json`**
 
 ```json
 {
@@ -102,7 +102,7 @@ packages:
 }
 ```
 
-- [ ] **Step 5: Create `.gitignore`**
+- [x] **Step 5: Create `.gitignore`**
 
 ```gitignore
 node_modules
@@ -112,13 +112,13 @@ dist
 *.local
 ```
 
-- [ ] **Step 6: Install concurrently at workspace root**
+- [x] **Step 6: Install concurrently at workspace root**
 
 ```bash
 pnpm add -D -w concurrently
 ```
 
-- [ ] **Step 7: Verify workspace structure**
+- [x] **Step 7: Verify workspace structure**
 
 ```bash
 pnpm ls --depth 0
@@ -126,7 +126,7 @@ pnpm ls --depth 0
 
 Expected: shows `concurrently` as a dev dependency.
 
-- [ ] **Step 8: Commit**
+- [x] **Step 8: Commit**
 
 ```bash
 git add pnpm-workspace.yaml package.json .nvmrc .gitignore pnpm-lock.yaml
@@ -148,13 +148,13 @@ git commit -m "chore: scaffold pnpm workspace root"
 - Consumes: workspace root from Task 1
 - Produces: `POST /api/chat` endpoint accepting `{ messages: UIMessage[] }` and returning a `UIMessageStreamResponse`
 
-- [ ] **Step 1: Create `packages/backend/` directory**
+- [x] **Step 1: Create `packages/backend/` directory**
 
 ```bash
 mkdir -p packages/backend/src
 ```
 
-- [ ] **Step 2: Create `packages/backend/package.json`**
+- [x] **Step 2: Create `packages/backend/package.json`**
 
 ```json
 {
@@ -168,14 +168,14 @@ mkdir -p packages/backend/src
 }
 ```
 
-- [ ] **Step 3: Install backend dependencies**
+- [x] **Step 3: Install backend dependencies**
 
 ```bash
 pnpm --filter backend add hono ai @ai-sdk/openai
 pnpm --filter backend add -D wrangler @cloudflare/workers-types typescript
 ```
 
-- [ ] **Step 4: Create `packages/backend/tsconfig.json`**
+- [x] **Step 4: Create `packages/backend/tsconfig.json`**
 
 ```json
 {
@@ -197,7 +197,7 @@ pnpm --filter backend add -D wrangler @cloudflare/workers-types typescript
 }
 ```
 
-- [ ] **Step 5: Create `packages/backend/wrangler.toml`**
+- [x] **Step 5: Create `packages/backend/wrangler.toml`**
 
 ```toml
 name = "chatbot-api"
@@ -206,13 +206,13 @@ compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 ```
 
-- [ ] **Step 6: Create `packages/backend/.dev.vars`**
+- [x] **Step 6: Create `packages/backend/.dev.vars`**
 
 ```
 OPENAI_API_KEY=sk-your-key-here
 ```
 
-- [ ] **Step 7: Create `packages/backend/src/index.ts`**
+- [x] **Step 7: Create `packages/backend/src/index.ts`**
 
 ```typescript
 import { Hono } from "hono";
@@ -251,7 +251,7 @@ app.post("/api/chat", async (c) => {
 export default app;
 ```
 
-- [ ] **Step 8: Verify backend compiles**
+- [x] **Step 8: Verify backend compiles**
 
 ```bash
 cd packages/backend && npx tsc --noEmit
@@ -259,7 +259,7 @@ cd packages/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add packages/backend
@@ -287,13 +287,13 @@ git commit -m "feat: add Hono backend with /api/chat streaming route"
 - Consumes: workspace root from Task 1
 - Produces: Vite dev server on port 5173 with `/api` proxy to port 8787, shadcn/ui initialized, Tailwind CSS 4 configured
 
-- [ ] **Step 1: Create frontend directory structure**
+- [x] **Step 1: Create frontend directory structure**
 
 ```bash
 mkdir -p packages/frontend/src/lib packages/frontend/src/components/ui packages/frontend/public
 ```
 
-- [ ] **Step 2: Create `packages/frontend/package.json`**
+- [x] **Step 2: Create `packages/frontend/package.json`**
 
 ```json
 {
@@ -308,14 +308,14 @@ mkdir -p packages/frontend/src/lib packages/frontend/src/components/ui packages/
 }
 ```
 
-- [ ] **Step 3: Install frontend dependencies**
+- [x] **Step 3: Install frontend dependencies**
 
 ```bash
 pnpm --filter frontend add react react-dom @ai-sdk/react ai
 pnpm --filter frontend add -D @vitejs/plugin-react vite typescript @types/react @types/react-dom @types/node tailwindcss @tailwindcss/vite
 ```
 
-- [ ] **Step 4: Install shadcn/ui utilities**
+- [x] **Step 4: Install shadcn/ui utilities**
 
 shadcn/ui components depend on `clsx`, `tailwind-merge`, and `class-variance-authority`:
 
@@ -323,7 +323,7 @@ shadcn/ui components depend on `clsx`, `tailwind-merge`, and `class-variance-aut
 pnpm --filter frontend add clsx tailwind-merge class-variance-authority
 ```
 
-- [ ] **Step 5: Create `packages/frontend/tsconfig.json`**
+- [x] **Step 5: Create `packages/frontend/tsconfig.json`**
 
 ```json
 {
@@ -341,7 +341,7 @@ pnpm --filter frontend add clsx tailwind-merge class-variance-authority
 }
 ```
 
-- [ ] **Step 6: Create `packages/frontend/tsconfig.app.json`**
+- [x] **Step 6: Create `packages/frontend/tsconfig.app.json`**
 
 ```json
 {
@@ -371,7 +371,7 @@ pnpm --filter frontend add clsx tailwind-merge class-variance-authority
 }
 ```
 
-- [ ] **Step 7: Create `packages/frontend/tsconfig.node.json`**
+- [x] **Step 7: Create `packages/frontend/tsconfig.node.json`**
 
 ```json
 {
@@ -395,7 +395,7 @@ pnpm --filter frontend add clsx tailwind-merge class-variance-authority
 }
 ```
 
-- [ ] **Step 8: Create `packages/frontend/vite.config.ts`**
+- [x] **Step 8: Create `packages/frontend/vite.config.ts`**
 
 ```typescript
 import path from "path";
@@ -421,7 +421,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 9: Create `packages/frontend/index.html`**
+- [x] **Step 9: Create `packages/frontend/index.html`**
 
 ```html
 <!doctype html>
@@ -438,13 +438,13 @@ export default defineConfig({
 </html>
 ```
 
-- [ ] **Step 10: Create `packages/frontend/src/app.css`**
+- [x] **Step 10: Create `packages/frontend/src/app.css`**
 
 ```css
 @import "tailwindcss";
 ```
 
-- [ ] **Step 11: Create `packages/frontend/src/lib/utils.ts`**
+- [x] **Step 11: Create `packages/frontend/src/lib/utils.ts`**
 
 ```typescript
 import { clsx, type ClassValue } from "clsx";
@@ -455,7 +455,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 ```
 
-- [ ] **Step 12: Create `packages/frontend/src/main.tsx`**
+- [x] **Step 12: Create `packages/frontend/src/main.tsx`**
 
 ```tsx
 import { StrictMode } from "react";
@@ -470,7 +470,7 @@ createRoot(document.getElementById("root")!).render(
 );
 ```
 
-- [ ] **Step 13: Create placeholder `packages/frontend/src/App.tsx`**
+- [x] **Step 13: Create placeholder `packages/frontend/src/App.tsx`**
 
 ```tsx
 export default function App() {
@@ -482,7 +482,7 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 14: Create `packages/frontend/components.json`**
+- [x] **Step 14: Create `packages/frontend/components.json`**
 
 ```json
 {
@@ -506,7 +506,7 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 15: Verify frontend compiles and starts**
+- [x] **Step 15: Verify frontend compiles and starts**
 
 ```bash
 cd packages/frontend && npx tsc -b && npx vite --host --port 5173 &
@@ -517,7 +517,7 @@ kill %1
 
 Expected: HTML with `<div id="root">` returned.
 
-- [ ] **Step 16: Commit**
+- [x] **Step 16: Commit**
 
 ```bash
 git add packages/frontend
@@ -539,7 +539,7 @@ git commit -m "feat: add React + Vite + TailwindCSS 4 frontend with shadcn/ui"
 - Consumes: Backend `POST /api/chat` endpoint (proxied via Vite)
 - Produces: Complete chat UI with streaming message display
 
-- [ ] **Step 1: Install AI Elements components**
+- [x] **Step 1: Install AI Elements components**
 
 Run from the frontend package directory:
 
@@ -552,7 +552,7 @@ This downloads component source into `src/components/ai-elements/`. If prompted 
 
 If the CLI asks about missing shadcn dependencies, allow it to install them.
 
-- [ ] **Step 2: Verify AI Elements files were created**
+- [x] **Step 2: Verify AI Elements files were created**
 
 ```bash
 ls packages/frontend/src/components/ai-elements/
@@ -560,7 +560,7 @@ ls packages/frontend/src/components/ai-elements/
 
 Expected: `conversation.tsx`, `message.tsx`, `prompt-input.tsx` (and possibly sub-files).
 
-- [ ] **Step 3: Update `packages/frontend/src/app.css` with shadcn theme**
+- [x] **Step 3: Update `packages/frontend/src/app.css` with shadcn theme**
 
 After AI Elements install, `app.css` may have been updated by the CLI. If not, ensure it has the Tailwind import and any shadcn theme variables the components need. The AI Elements CLI typically handles this. Verify:
 
@@ -570,7 +570,7 @@ head -20 packages/frontend/src/app.css
 
 If it only has `@import "tailwindcss";`, that is fine — the AI Elements components use Tailwind utility classes and the shadcn theming system will have been configured by the CLI.
 
-- [ ] **Step 4: Replace `packages/frontend/src/App.tsx` with chat UI**
+- [x] **Step 4: Replace `packages/frontend/src/App.tsx` with chat UI**
 
 ```tsx
 import { useChat } from "@ai-sdk/react";
@@ -641,7 +641,7 @@ export default function App() {
 }
 ```
 
-- [ ] **Step 5: Verify frontend compiles**
+- [x] **Step 5: Verify frontend compiles**
 
 ```bash
 cd packages/frontend && npx tsc -b
@@ -653,7 +653,7 @@ Expected: no errors. If there are type errors from AI Elements components (they 
 pnpm --filter frontend add lucide-react
 ```
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/frontend/src
@@ -672,11 +672,11 @@ git commit -m "feat: add chat UI with AI Elements conversation, message, and pro
 - Consumes: All previous tasks
 - Produces: Verified working dev setup with `pnpm dev`
 
-- [ ] **Step 1: Set a real OpenAI API key in `.dev.vars`**
+- [x] **Step 1: Set a real OpenAI API key in `.dev.vars`**
 
 Edit `packages/backend/.dev.vars` and replace `sk-your-key-here` with a valid OpenAI API key.
 
-- [ ] **Step 2: Start the full dev environment**
+- [x] **Step 2: Start the full dev environment**
 
 From the workspace root:
 
@@ -688,7 +688,7 @@ Expected: Two processes start:
 - `[backend]` — wrangler dev on port 8787
 - `[frontend]` — vite on port 5173
 
-- [ ] **Step 3: Test the backend directly**
+- [x] **Step 3: Test the backend directly**
 
 ```bash
 curl -X POST http://localhost:8787/api/chat \
@@ -698,7 +698,7 @@ curl -X POST http://localhost:8787/api/chat \
 
 Expected: streamed text response from GPT-4o-mini.
 
-- [ ] **Step 4: Test the frontend proxy**
+- [x] **Step 4: Test the frontend proxy**
 
 ```bash
 curl -X POST http://localhost:5173/api/chat \
@@ -708,7 +708,7 @@ curl -X POST http://localhost:5173/api/chat \
 
 Expected: same streamed response, confirming the Vite proxy works.
 
-- [ ] **Step 5: Open browser and test the chat UI**
+- [x] **Step 5: Open browser and test the chat UI**
 
 Open `http://localhost:5173` in a browser. Type a message and send. Verify:
 - Message appears in the conversation as "user"
@@ -716,7 +716,7 @@ Open `http://localhost:5173` in a browser. Type a message and send. Verify:
 - Submit button reflects streaming status
 - Multiple messages maintain conversation history
 
-- [ ] **Step 6: Final commit**
+- [x] **Step 6: Final commit**
 
 ```bash
 git add -A

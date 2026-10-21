@@ -1,6 +1,6 @@
 # Ollama Reasoning Chat + TanStack Router Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a second chat example connected to a local Ollama model (gemma4:12b) with reasoning trace display, and introduce TanStack Router for navigating between chat examples.
 
@@ -59,13 +59,13 @@
 - Consumes: Existing Hono app, CORS middleware
 - Produces: `POST /api/ollama-chat` accepting `{ messages: UIMessage[] }` and returning a `UIMessageStreamResponse` with reasoning parts
 
-- [ ] **Step 1: Install ollama-ai-provider-v2**
+- [x] **Step 1: Install ollama-ai-provider-v2**
 
 ```bash
 pnpm --filter backend add ollama-ai-provider-v2
 ```
 
-- [ ] **Step 2: Add the `/api/ollama-chat` route to `packages/backend/src/index.ts`**
+- [x] **Step 2: Add the `/api/ollama-chat` route to `packages/backend/src/index.ts`**
 
 The full file after modification:
 
@@ -133,7 +133,7 @@ app.post("/api/ollama-chat", async (c) => {
 export default app;
 ```
 
-- [ ] **Step 3: Verify backend compiles**
+- [x] **Step 3: Verify backend compiles**
 
 ```bash
 cd packages/backend && npx tsc --noEmit
@@ -141,7 +141,7 @@ cd packages/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend
@@ -165,14 +165,14 @@ git commit -m "feat: add /api/ollama-chat route with reasoning support"
 - Consumes: Existing AI Elements components, useChat hook, existing `/api/chat` endpoint
 - Produces: TanStack Router setup with `/` (index) and `/openai-chat` routes; existing chat functionality preserved at `/openai-chat`
 
-- [ ] **Step 1: Install TanStack Router dependencies**
+- [x] **Step 1: Install TanStack Router dependencies**
 
 ```bash
 pnpm --filter frontend add @tanstack/react-router
 pnpm --filter frontend add -D @tanstack/router-plugin
 ```
 
-- [ ] **Step 2: Update `packages/frontend/vite.config.ts`**
+- [x] **Step 2: Update `packages/frontend/vite.config.ts`**
 
 Add the TanStack Router plugin before the React plugin:
 
@@ -208,7 +208,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 3: Create `packages/frontend/src/routes/__root.tsx`**
+- [x] **Step 3: Create `packages/frontend/src/routes/__root.tsx`**
 
 ```tsx
 import { Link, Outlet, createRootRoute } from "@tanstack/react-router";
@@ -247,7 +247,7 @@ function RootLayout() {
 }
 ```
 
-- [ ] **Step 4: Create `packages/frontend/src/routes/index.tsx`**
+- [x] **Step 4: Create `packages/frontend/src/routes/index.tsx`**
 
 ```tsx
 import { createFileRoute, Link } from "@tanstack/react-router";
@@ -290,7 +290,7 @@ function IndexPage() {
 }
 ```
 
-- [ ] **Step 5: Create `packages/frontend/src/routes/openai-chat.tsx`**
+- [x] **Step 5: Create `packages/frontend/src/routes/openai-chat.tsx`**
 
 Extract the existing App.tsx chat into a route file:
 
@@ -364,7 +364,7 @@ function OpenAIChat() {
 }
 ```
 
-- [ ] **Step 6: Update `packages/frontend/src/main.tsx`**
+- [x] **Step 6: Update `packages/frontend/src/main.tsx`**
 
 Replace the direct `<App />` mount with the TanStack Router:
 
@@ -393,13 +393,13 @@ createRoot(document.getElementById("root")!).render(
 );
 ```
 
-- [ ] **Step 7: Delete `packages/frontend/src/App.tsx`**
+- [x] **Step 7: Delete `packages/frontend/src/App.tsx`**
 
 ```bash
 rm packages/frontend/src/App.tsx
 ```
 
-- [ ] **Step 8: Generate route tree and verify compilation**
+- [x] **Step 8: Generate route tree and verify compilation**
 
 The TanStack Router Vite plugin auto-generates `routeTree.gen.ts` when the dev server starts. Run:
 
@@ -418,7 +418,7 @@ npx tsc -b
 
 Expected: `routeTree.gen.ts` exists, no type errors.
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add packages/frontend
@@ -437,7 +437,7 @@ git commit -m "feat: add TanStack Router with index and openai-chat routes"
 - Consumes: TanStack Router from Task 2, AI Elements components, `/api/ollama-chat` endpoint from Task 1
 - Produces: `/ollama-chat` route rendering a chat UI with collapsible reasoning traces
 
-- [ ] **Step 1: Install the AI Elements reasoning component**
+- [x] **Step 1: Install the AI Elements reasoning component**
 
 ```bash
 cd packages/frontend
@@ -448,7 +448,7 @@ Accept defaults if prompted. This installs the component source into `src/compon
 
 If the CLI also installs additional shadcn dependencies (like `collapsible`), allow it.
 
-- [ ] **Step 2: Verify the reasoning component was installed**
+- [x] **Step 2: Verify the reasoning component was installed**
 
 ```bash
 ls packages/frontend/src/components/ai-elements/reasoning.tsx
@@ -456,7 +456,7 @@ ls packages/frontend/src/components/ai-elements/reasoning.tsx
 
 Expected: file exists.
 
-- [ ] **Step 3: Create `packages/frontend/src/routes/ollama-chat.tsx`**
+- [x] **Step 3: Create `packages/frontend/src/routes/ollama-chat.tsx`**
 
 ```tsx
 import { createFileRoute } from "@tanstack/react-router";
@@ -547,7 +547,7 @@ function OllamaChat() {
 }
 ```
 
-- [ ] **Step 4: Verify frontend compiles**
+- [x] **Step 4: Verify frontend compiles**
 
 The TanStack Router plugin will regenerate `routeTree.gen.ts` to include the new `/ollama-chat` route. Start Vite briefly to trigger regeneration:
 
@@ -564,7 +564,7 @@ Expected: no type errors. If the reasoning component imports components not yet 
 pnpm --filter frontend add @radix-ui/react-collapsible
 ```
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/frontend
@@ -582,7 +582,7 @@ git commit -m "feat: add Ollama chat route with reasoning trace display"
 - Consumes: All previous tasks
 - Produces: Verified working full stack with routing, OpenAI chat, and Ollama chat with reasoning
 
-- [ ] **Step 1: Ensure Ollama is running with gemma4:12b**
+- [x] **Step 1: Ensure Ollama is running with gemma4:12b**
 
 ```bash
 ollama list | grep gemma4
@@ -590,7 +590,7 @@ ollama list | grep gemma4
 
 If not present: `ollama pull gemma4:12b`
 
-- [ ] **Step 2: Start the full dev environment**
+- [x] **Step 2: Start the full dev environment**
 
 From workspace root:
 
@@ -602,7 +602,7 @@ Expected:
 - `[backend]` — wrangler dev on port 8787
 - `[frontend]` — vite on port 5173
 
-- [ ] **Step 3: Test routing**
+- [x] **Step 3: Test routing**
 
 Open `http://localhost:5173` in a browser. Verify:
 - Index page shows with links to "OpenAI Chat" and "Ollama Chat"
@@ -611,13 +611,13 @@ Open `http://localhost:5173` in a browser. Verify:
 - Clicking "Ollama Chat" navigates to `/ollama-chat`
 - Active route is highlighted in nav
 
-- [ ] **Step 4: Test OpenAI chat**
+- [x] **Step 4: Test OpenAI chat**
 
 Navigate to `/openai-chat`. Send a message. Verify:
 - Messages stream in from GPT-4o-mini
 - Same behavior as the original App.tsx chat
 
-- [ ] **Step 5: Test Ollama chat with reasoning**
+- [x] **Step 5: Test Ollama chat with reasoning**
 
 Navigate to `/ollama-chat`. Send a message that encourages reasoning (e.g. "What is 15 * 37? Show your work."). Verify:
 - Reasoning trace appears in a collapsible block before the answer
@@ -626,7 +626,7 @@ Navigate to `/ollama-chat`. Send a message that encourages reasoning (e.g. "What
 - Final answer renders below the reasoning block
 - Multiple messages maintain conversation history
 
-- [ ] **Step 6: Test the Ollama backend directly**
+- [x] **Step 6: Test the Ollama backend directly**
 
 ```bash
 curl -s -X POST http://localhost:8787/api/ollama-chat \
@@ -637,7 +637,7 @@ curl -s -X POST http://localhost:8787/api/ollama-chat \
 
 Expected: streamed response with reasoning and text parts.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add -A

@@ -1,6 +1,6 @@
 # Tool Invocation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Add a tool invocation system so the AI model can call custom backend functions during a conversation, with results rendered in the chat UI.
 
@@ -32,7 +32,7 @@
 - Consumes: nothing
 - Produces: `getWeather` — a named export of type `ReturnType<typeof tool>` with `inputSchema: z.object({ city: z.string() })` and `execute: ({ city }) => Promise<{ temperature: number; condition: string; city: string }>`
 
-- [ ] **Step 1: Install zod in the backend package**
+- [x] **Step 1: Install zod in the backend package**
 
 Run from the repo root:
 
@@ -40,7 +40,7 @@ Run from the repo root:
 cd packages/backend && pnpm add zod
 ```
 
-- [ ] **Step 2: Create the weather tool**
+- [x] **Step 2: Create the weather tool**
 
 Create file `packages/backend/src/tools/weather.ts`:
 
@@ -62,7 +62,7 @@ export const getWeather = tool({
 });
 ```
 
-- [ ] **Step 3: Verify the file compiles**
+- [x] **Step 3: Verify the file compiles**
 
 ```bash
 cd packages/backend && npx tsc --noEmit
@@ -70,7 +70,7 @@ cd packages/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/package.json pnpm-lock.yaml packages/backend/src/tools/weather.ts
@@ -99,7 +99,7 @@ EOF
   - `convertUnits` — a named export of type `ReturnType<typeof tool>` with `inputSchema: z.object({ value: z.number(), from: z.string(), to: z.string() })` and `execute: ({ value, from, to }) => Promise<{ value: number; from: string; to: string; result: number | string }>`
   - `tools` — a `ToolSet` object containing `{ getWeather, convertUnits }`
 
-- [ ] **Step 1: Create the unit converter tool**
+- [x] **Step 1: Create the unit converter tool**
 
 Create file `packages/backend/src/tools/convert-units.ts`:
 
@@ -140,7 +140,7 @@ export const convertUnits = tool({
 });
 ```
 
-- [ ] **Step 2: Create the tool registry**
+- [x] **Step 2: Create the tool registry**
 
 Create file `packages/backend/src/tools/index.ts`:
 
@@ -155,7 +155,7 @@ export const tools = {
 } satisfies ToolSet;
 ```
 
-- [ ] **Step 3: Verify compilation**
+- [x] **Step 3: Verify compilation**
 
 ```bash
 cd packages/backend && npx tsc --noEmit
@@ -163,7 +163,7 @@ cd packages/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/src/tools/convert-units.ts packages/backend/src/tools/index.ts
@@ -191,7 +191,7 @@ EOF
 - Consumes: `tools` from `../tools` (the `ToolSet` object)
 - Produces: the `/api/chat` endpoint now passes tools to `streamText` when `config.supportsTools !== false`, streaming tool-call parts alongside text/reasoning parts
 
-- [ ] **Step 1: Add `supportsTools` to `ModelConfig`**
+- [x] **Step 1: Add `supportsTools` to `ModelConfig`**
 
 In `packages/backend/src/providers.ts`, add the `supportsTools` field to the `ModelConfig` type. Both models default to `true` (tools enabled). The flag exists so individual models can opt out later if needed.
 
@@ -220,7 +220,7 @@ export type ModelConfig = {
 
 Do **not** set `supportsTools: false` on any model — the user specified all models should attempt tool calling. Leave both `gpt-4o-mini` and `gemma4:12b` defaulting to `true`.
 
-- [ ] **Step 2: Wire tools into the chat route**
+- [x] **Step 2: Wire tools into the chat route**
 
 In `packages/backend/src/routes/chat.ts`, add the tools import and pass them conditionally.
 
@@ -286,7 +286,7 @@ const result = streamText({
 
 The `stopWhen: isStepCount(2)` allows two steps: step 1 is the tool call, step 2 is the text response that uses the tool results. Without this, the default `isStepCount(1)` stops after the tool call and the model never generates a follow-up text answer.
 
-- [ ] **Step 3: Verify compilation**
+- [x] **Step 3: Verify compilation**
 
 ```bash
 cd packages/backend && npx tsc --noEmit
@@ -294,7 +294,7 @@ cd packages/backend && npx tsc --noEmit
 
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/src/providers.ts packages/backend/src/routes/chat.ts
@@ -323,7 +323,7 @@ EOF
 - Consumes: `Tool`, `ToolContent`, `ToolHeader`, `ToolInput`, `ToolOutput` from `@/components/ai-elements/tool`
 - Produces: the chat UI now renders tool invocation parts with collapsible display, status badges, and formatted I/O
 
-- [ ] **Step 1: Install the ai-elements Tool component**
+- [x] **Step 1: Install the ai-elements Tool component**
 
 Run from the frontend package directory:
 
@@ -333,7 +333,7 @@ cd packages/frontend && pnpm dlx ai-elements@latest add tool
 
 This will create `src/components/ai-elements/tool.tsx` and install any missing UI dependencies (like `badge`).
 
-- [ ] **Step 2: Verify the component was installed**
+- [x] **Step 2: Verify the component was installed**
 
 ```bash
 ls packages/frontend/src/components/ai-elements/tool.tsx
@@ -341,7 +341,7 @@ ls packages/frontend/src/components/ai-elements/tool.tsx
 
 Expected: file exists. If the CLI also created `components/ui/badge.tsx`, that's expected — the Tool component depends on it.
 
-- [ ] **Step 3: Add tool rendering to the chat page**
+- [x] **Step 3: Add tool rendering to the chat page**
 
 In `packages/frontend/src/routes/index.tsx`, add the Tool imports. The current imports (lines 1-39) include components from `message`, `reasoning`, `prompt-input`, and `model-selector`. After the model-selector imports (around line 39), add:
 
@@ -441,7 +441,7 @@ Replace it with:
 
 The cast `as ToolUIPart` is necessary because `String.prototype.startsWith` doesn't narrow TypeScript unions. `ToolUIPart` is the AI SDK's generic type for all tool parts — it provides typed access to `.input`, `.output`, `.state`, and `.errorText`. If `ToolUIPart` isn't directly exported from `ai`, check the ai-elements `tool.tsx` source — it imports `ToolPart` which is equivalent.
 
-- [ ] **Step 4: Verify compilation**
+- [x] **Step 4: Verify compilation**
 
 ```bash
 cd packages/frontend && npx tsc --noEmit
@@ -455,7 +455,7 @@ grep -r "ToolUIPart\|ToolPart\|DynamicToolUIPart" packages/frontend/src/componen
 
 Use whatever type name the tool component imports.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/frontend/src/components/ai-elements/tool.tsx packages/frontend/src/components/ui/badge.tsx packages/frontend/src/routes/index.tsx
@@ -483,7 +483,7 @@ Note: only include `badge.tsx` in the git add if the ai-elements CLI created it.
 - Consumes: everything from Tasks 1-4
 - Produces: verified working tool invocation
 
-- [ ] **Step 1: Start the backend dev server**
+- [x] **Step 1: Start the backend dev server**
 
 ```bash
 cd packages/backend && pnpm dev
@@ -491,7 +491,7 @@ cd packages/backend && pnpm dev
 
 Expected: Wrangler starts the worker on `http://localhost:8787` (or the configured port).
 
-- [ ] **Step 2: Start the frontend dev server**
+- [x] **Step 2: Start the frontend dev server**
 
 In a second terminal:
 
@@ -501,7 +501,7 @@ cd packages/frontend && pnpm dev
 
 Expected: Vite starts on `http://localhost:5173`.
 
-- [ ] **Step 3: Test tool invocation with OpenAI**
+- [x] **Step 3: Test tool invocation with OpenAI**
 
 Open `http://localhost:5173` in a browser. Select the GPT-4o Mini model. Send a message like:
 
@@ -515,7 +515,7 @@ Expected:
   - Output section showing the weather result JSON
 - The model then responds with a text message incorporating the weather data
 
-- [ ] **Step 4: Test unit conversion tool**
+- [x] **Step 4: Test unit conversion tool**
 
 Send a message like:
 
@@ -526,7 +526,7 @@ Expected:
 - Tool display shows the conversion input and result (62.137)
 - Model responds with the answer in natural language
 
-- [ ] **Step 5: Test Ollama model with tools**
+- [x] **Step 5: Test Ollama model with tools**
 
 Switch to the Gemma 4 12B model (requires Ollama running locally). Send a message like "What's the weather in Paris?"
 
@@ -536,7 +536,7 @@ Expected:
 - If it fails gracefully: the model responds with text only (no crash, no console errors)
 - The key verification is that the app doesn't error — graceful degradation is acceptable
 
-- [ ] **Step 6: Test unsupported conversion**
+- [x] **Step 6: Test unsupported conversion**
 
 Send a message like:
 

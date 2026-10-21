@@ -1,6 +1,6 @@
 # MCP Client Support Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** The chat backend connects to external MCP servers over Streamable HTTP and exposes their tools to the model alongside local tools, via two swappable client implementations (hand-rolled and `@ai-sdk/mcp`).
 
@@ -35,7 +35,7 @@
 - Consumes: `ToolSet` from `ai` (already a backend dependency).
 - Produces: `McpServerConfig`, `McpConnection`, `McpToolLoader` types and the `mcpServers` config array. Tasks 2–4 import these exact names from `./types` and `./config`.
 
-- [ ] **Step 1: Create `packages/backend/src/mcp/types.ts`**
+- [x] **Step 1: Create `packages/backend/src/mcp/types.ts`**
 
 ```ts
 import type { ToolSet } from "ai";
@@ -59,7 +59,7 @@ export interface McpConnection {
 export type McpToolLoader = (server: McpServerConfig) => Promise<McpConnection>;
 ```
 
-- [ ] **Step 2: Create `packages/backend/src/mcp/config.ts`**
+- [x] **Step 2: Create `packages/backend/src/mcp/config.ts`**
 
 ```ts
 import type { McpServerConfig } from "./types";
@@ -78,7 +78,7 @@ export const mcpServers: McpServerConfig[] = [
 ];
 ```
 
-- [ ] **Step 3: Add the `MCP_IMPL` binding to `packages/backend/src/types.ts`**
+- [x] **Step 3: Add the `MCP_IMPL` binding to `packages/backend/src/types.ts`**
 
 Change the `Bindings` type to:
 
@@ -94,7 +94,7 @@ export type AppEnv = {
 };
 ```
 
-- [ ] **Step 4: Add the var to `packages/backend/wrangler.toml`**
+- [x] **Step 4: Add the var to `packages/backend/wrangler.toml`**
 
 Append:
 
@@ -103,12 +103,12 @@ Append:
 MCP_IMPL = "ai-sdk"
 ```
 
-- [ ] **Step 5: Typecheck**
+- [x] **Step 5: Typecheck**
 
 Run: `pnpm --filter backend exec tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/backend/src/mcp/types.ts packages/backend/src/mcp/config.ts packages/backend/src/types.ts packages/backend/wrangler.toml
@@ -127,12 +127,12 @@ git commit -m "feat: add MCP module types, static server config, and MCP_IMPL en
 - Consumes: `McpToolLoader`, `McpServerConfig`, `McpConnection` from `./types` (Task 1).
 - Produces: `aiSdkLoader: McpToolLoader`. Task 4 imports this exact name.
 
-- [ ] **Step 1: Install the dependency**
+- [x] **Step 1: Install the dependency**
 
 Run: `pnpm --filter backend add @ai-sdk/mcp`
 Expected: installs without peer-dependency errors against `ai@^7`.
 
-- [ ] **Step 2: Create `packages/backend/src/mcp/ai-sdk-loader.ts`**
+- [x] **Step 2: Create `packages/backend/src/mcp/ai-sdk-loader.ts`**
 
 ```ts
 import { createMCPClient } from "@ai-sdk/mcp";
@@ -156,12 +156,12 @@ version (e.g. `experimental_createMCPClient` re-exported from `ai`), check
 `node_modules/@ai-sdk/mcp/dist/index.d.ts` for the actual export name and use
 that — do not guess.
 
-- [ ] **Step 3: Typecheck**
+- [x] **Step 3: Typecheck**
 
 Run: `pnpm --filter backend exec tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/package.json pnpm-lock.yaml packages/backend/src/mcp/ai-sdk-loader.ts
@@ -179,7 +179,7 @@ git commit -m "feat: add @ai-sdk/mcp loader implementation"
 - Consumes: `McpToolLoader`, `McpServerConfig` from `./types` (Task 1); `jsonSchema`, `tool` from `ai`.
 - Produces: `rawLoader: McpToolLoader`. Task 4 imports this exact name.
 
-- [ ] **Step 1: Create `packages/backend/src/mcp/raw-loader.ts`**
+- [x] **Step 1: Create `packages/backend/src/mcp/raw-loader.ts`**
 
 This is the educational implementation: it makes the Streamable HTTP mechanics
 visible that `@ai-sdk/mcp` hides — the `initialize` handshake, the
@@ -349,13 +349,13 @@ export const rawLoader: McpToolLoader = async (server) => {
 };
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm --filter backend exec tsc --noEmit`
 Expected: no errors. If `jsonSchema(def.inputSchema)` complains about the
 argument type, cast the schema: `jsonSchema(def.inputSchema as Parameters<typeof jsonSchema>[0])`.
 
-- [ ] **Step 3: Smoke-test the handshake against a live server**
+- [x] **Step 3: Smoke-test the handshake against a live server**
 
 Run (from repo root):
 
@@ -384,7 +384,7 @@ JSON or an SSE `data:` line — both are fine and this is exactly what
 `parseJsonRpcResponse` handles). If the endpoint requires a different protocol
 version, use the version string from its error message in `PROTOCOL_VERSION`.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/src/mcp/raw-loader.ts
@@ -402,7 +402,7 @@ git commit -m "feat: add hand-rolled Streamable HTTP MCP client loader"
 - Consumes: `aiSdkLoader` (Task 2), `rawLoader` (Task 3), `mcpServers` (Task 1), `McpConnection`/`McpToolLoader` types (Task 1), `AppEnv` from `../types`.
 - Produces: `loadMcpTools(env: AppEnv["Bindings"]): Promise<{ tools: ToolSet; close: () => Promise<void> }>`. Task 5 imports this exact name from `../mcp`.
 
-- [ ] **Step 1: Create `packages/backend/src/mcp/index.ts`**
+- [x] **Step 1: Create `packages/backend/src/mcp/index.ts`**
 
 ```ts
 import type { ToolSet } from "ai";
@@ -469,12 +469,12 @@ export async function loadMcpTools(
 }
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm --filter backend exec tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add packages/backend/src/mcp/index.ts
@@ -492,7 +492,7 @@ git commit -m "feat: add MCP orchestrator with impl selection, timeout, and name
 - Consumes: `loadMcpTools` from `../mcp` (Task 4); existing `tools`, `getModel`, `flushTelemetry`.
 - Produces: the `/chat` endpoint now streams with merged local + MCP tools; no signature changes for the frontend.
 
-- [ ] **Step 1: Rewrite `packages/backend/src/routes/chat.ts`**
+- [x] **Step 1: Rewrite `packages/backend/src/routes/chat.ts`**
 
 Replace the whole file with:
 
@@ -559,12 +559,12 @@ chat.post("/chat", async (c) => {
 export default chat;
 ```
 
-- [ ] **Step 2: Typecheck**
+- [x] **Step 2: Typecheck**
 
 Run: `pnpm --filter backend exec tsc --noEmit`
 Expected: no errors.
 
-- [ ] **Step 3: Manually verify the endpoint streams MCP tool calls**
+- [x] **Step 3: Manually verify the endpoint streams MCP tool calls**
 
 Start the backend: `pnpm --filter backend dev` (leave running; note the port,
 default 8787). Then:
@@ -583,14 +583,14 @@ Expected: the UI-message stream contains a `dynamic-tool` part whose
 `toolName` starts with `cf-docs_`, followed by streamed text referencing doc
 content. Also check the dev-server logs show no unhandled errors.
 
-- [ ] **Step 4: Verify failure isolation**
+- [x] **Step 4: Verify failure isolation**
 
 Temporarily set `enabled: false` → back to `true` is NOT the test; instead
 edit `config.ts` to point `deepwiki`'s `url` at `https://invalid.example/mcp`,
 re-run the curl above. Expected: chat still answers via `cf-docs`, and the log
 shows `MCP server "deepwiki" unavailable:`. Revert the URL afterwards.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/backend/src/routes/chat.ts
@@ -608,7 +608,7 @@ git commit -m "feat: merge MCP tools into chat route with graceful degradation"
 - Consumes: `ToolPart` type already exported by `packages/frontend/src/components/ai-elements/tool.tsx:33`; the `dynamic-tool` UI message parts now emitted by the backend (Task 5).
 - Produces: MCP tool invocations render in the chat UI with the namespaced tool name as provenance.
 
-- [ ] **Step 1: Generalize `ToolInvocation` and add the render branch in `packages/frontend/src/routes/index.tsx`**
+- [x] **Step 1: Generalize `ToolInvocation` and add the render branch in `packages/frontend/src/routes/index.tsx`**
 
 Replace the `ToolUIPart` import (line 39) with:
 
@@ -656,12 +656,12 @@ if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
 }
 ```
 
-- [ ] **Step 2: Build the frontend**
+- [x] **Step 2: Build the frontend**
 
 Run: `pnpm --filter frontend build`
 Expected: typecheck + build succeed.
 
-- [ ] **Step 3: End-to-end verification, AI SDK implementation**
+- [x] **Step 3: End-to-end verification, AI SDK implementation**
 
 Run backend (`pnpm --filter backend dev`) and frontend (`pnpm --filter frontend dev`).
 In the browser: ask **"Search the Cloudflare docs for Durable Object alarms."**
@@ -670,7 +670,7 @@ opens on completion showing input/output, and the answer cites doc content.
 Local tools still work: ask **"convert 5 km to miles"** and confirm the
 `convertUnits` card renders as before.
 
-- [ ] **Step 4: End-to-end verification, raw implementation**
+- [x] **Step 4: End-to-end verification, raw implementation**
 
 Stop the backend; restart with the raw loader:
 
@@ -684,7 +684,7 @@ Repeat the docs question. Expected: identical behavior — same namespaced tool
 card, same answer quality. This is the payoff moment: both implementations are
 indistinguishable through the seam.
 
-- [ ] **Step 5: Verify the no-tools model path**
+- [x] **Step 5: Verify the no-tools model path**
 
 If a local Ollama with `gemma4:12b` is available: select "Gemma 4 12B" in the
 UI, send any message, and confirm the reply streams with no MCP connection
@@ -692,7 +692,7 @@ attempts in the backend log. If Ollama is not running, verify by code
 inspection that `supportsTools === false` short-circuits before
 `loadMcpTools` (it does — Task 5 Step 1) and note it in the task report.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/frontend/src/routes/index.tsx

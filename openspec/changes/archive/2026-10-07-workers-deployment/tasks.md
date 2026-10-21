@@ -1,8 +1,8 @@
-> **Superseded in part (2026-10-15):** Clerk tasks (authorized-parties parser, Task 7 Clerk production instance, `--expect-clerk`) were dropped. Auth now runs at the edge through Cloudflare Access; see the addendum in `specs/2026-10-07-workers-deployment-design.md`.
+> **Superseded in part (2026-10-15):** Clerk tasks (authorized-parties parser, Task 7 Clerk production instance, `--expect-clerk`) were dropped. Auth now runs at the edge through Cloudflare Access; see the addendum in `design.md`.
 
 # Cloudflare Workers Deployment Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Ship the chatbot to production as a single Cloudflare Worker at `https://chatbot.course-projects.ai-web.dev`, first without auth, then with a Clerk production instance.
 
@@ -64,19 +64,19 @@ The working tree has uncommitted work from two sources: earlier feature work (gu
 - Consumes: none
 - Produces: clean `git status` on branch `deploy/workers-custom-domain`, with a baseline that builds
 
-- [ ] **Step 1: Create a branch**
+- [x] **Step 1: Create a branch**
 
 ```bash
 cd /Users/kirittanna/projects/aiwebdev/course-projects/chatbot
 git switch -c deploy/workers-custom-domain
 ```
 
-- [ ] **Step 2: Confirm the eval secrets file is ignored**
+- [x] **Step 2: Confirm the eval secrets file is ignored**
 
 Run: `git status --short | grep -F 'packages/evals/.env'`
 Expected: **no output**. If it prints anything, stop: `.gitignore` must contain `.env` before continuing.
 
-- [ ] **Step 3: Commit everything as one baseline**
+- [x] **Step 3: Commit everything as one baseline**
 
 The two sources of changes overlap in the same files (`middleware.ts`, `chat.ts`, `types.ts`, `index.tsx`, `pnpm-lock.yaml`), so splitting them would produce a commit that doesn't install or build. The message is a default; the repo owner may reword it.
 
@@ -95,12 +95,12 @@ git commit -m "feat(deploy): baseline for Workers deployment
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
-- [ ] **Step 4: Confirm the baseline builds**
+- [x] **Step 4: Confirm the baseline builds**
 
 Run: `pnpm install --frozen-lockfile && pnpm run build 2>&1 | tail -3`
 Expected: install succeeds; output ends with `--dry-run: exiting now.`
 
-- [ ] **Step 5: Verify**
+- [x] **Step 5: Verify**
 
 Run: `git status --short`
 Expected: empty output.
@@ -119,7 +119,7 @@ A black-box check that works against `wrangler dev`, the `workers.dev` URL, and 
 - Consumes: a running Worker at `<base-url>`
 - Produces: `pnpm run smoke <base-url> [--chat] [--expect-clerk]`. Exit 0 if all checks pass, 1 if any fail, 2 on usage error. Later tasks rely on these exact flags.
 
-- [ ] **Step 1: Create `scripts/smoke-test.sh`**
+- [x] **Step 1: Create `scripts/smoke-test.sh`**
 
 ```bash
 #!/usr/bin/env bash
@@ -204,7 +204,7 @@ Add to root `package.json` `scripts` (after `"deploy"`):
 "smoke": "bash scripts/smoke-test.sh"
 ```
 
-- [ ] **Step 2: Run against nothing. It must fail cleanly (Review Focus #2)**
+- [x] **Step 2: Run against nothing. It must fail cleanly (Review Focus #2)**
 
 Run: `pnpm run smoke http://localhost:8799; echo "exit=$?"`
 Expected:
@@ -213,7 +213,7 @@ FAIL  cannot connect to http://localhost:8799 (DNS not propagated or certificate
 exit=1
 ```
 
-- [ ] **Step 3: Run against local `wrangler dev`. It must pass**
+- [x] **Step 3: Run against local `wrangler dev`. It must pass**
 
 ```bash
 pnpm run build
@@ -224,14 +224,14 @@ pnpm run smoke http://localhost:8799 --chat; echo "exit=$?"
 ```
 Expected: 6 `PASS` lines (`/ serves HTML`, `SPA fallback…`, `entry bundle…`, `GET /api/chat reaches Hono…`, `unknown model -> 400`, `chat stream completes`), then `All checks passed.` and `exit=0`.
 
-- [ ] **Step 4: Confirm `--expect-clerk` fails on a build with no key (Review Focus #4)**
+- [x] **Step 4: Confirm `--expect-clerk` fails on a build with no key (Review Focus #4)**
 
 Run: `pnpm run smoke http://localhost:8799 --expect-clerk; echo "exit=$?"`
 Expected: `FAIL  no pk_live_ Clerk key in /assets/index-….js …` and `exit=1`. (No `packages/frontend/.env*` with a key exists yet. The bundle still contains Clerk's own bare `"pk_live_"` literals, and this step proves they do not cause a false pass.)
 
 Then stop the dev server: `pkill -f "wrangler dev --port 8799"`
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add scripts/smoke-test.sh package.json
@@ -255,7 +255,7 @@ Replaces the `getAuthorizedParties()` stub in `packages/backend/src/middleware.t
 - Consumes: `AppEnv["Bindings"]` from `packages/backend/src/types.ts`
 - Produces: `parseAuthorizedParties(value: string | undefined): string[]` exported from `packages/backend/src/auth/authorized-parties.ts`; env binding `CLERK_AUTHORIZED_PARTIES?: string`
 
-- [ ] **Step 1: Add Vitest**
+- [x] **Step 1: Add Vitest**
 
 ```bash
 pnpm --filter backend add -D vitest@^5.0.3
@@ -267,7 +267,7 @@ Add to `packages/backend/package.json` `scripts`:
 "test": "vitest run"
 ```
 
-- [ ] **Step 2: Write the failing test** — `packages/backend/src/auth/authorized-parties.test.ts`
+- [x] **Step 2: Write the failing test** — `packages/backend/src/auth/authorized-parties.test.ts`
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -316,12 +316,12 @@ describe("parseAuthorizedParties", () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `pnpm --filter backend test`
 Expected: FAIL. The suite errors because `./authorized-parties` cannot be resolved.
 
-- [ ] **Step 4: Write the implementation** — `packages/backend/src/auth/authorized-parties.ts`
+- [x] **Step 4: Write the implementation** — `packages/backend/src/auth/authorized-parties.ts`
 
 ```ts
 /**
@@ -350,19 +350,19 @@ export function parseAuthorizedParties(value: string | undefined): string[] {
 }
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 Run: `pnpm --filter backend test`
 Expected: `Test Files  1 passed (1)`, `Tests  6 passed (6)`.
 
-- [ ] **Step 6: Add the binding type** in `packages/backend/src/types.ts`, directly after the `CLERK_PUBLISHABLE_KEY` entry:
+- [x] **Step 6: Add the binding type** in `packages/backend/src/types.ts`, directly after the `CLERK_PUBLISHABLE_KEY` entry:
 
 ```ts
     /** Comma-separated origins allowed as the Clerk token `azp` (e.g. "https://chatbot.course-projects.ai-web.dev") */
     CLERK_AUTHORIZED_PARTIES?: string;
 ```
 
-- [ ] **Step 7: Wire it into the middleware**
+- [x] **Step 7: Wire it into the middleware**
 
 Replace all of `packages/backend/src/middleware.ts` with:
 
@@ -410,14 +410,14 @@ export function registerMiddleware(app: Hono<AppEnv>) {
 }
 ```
 
-- [ ] **Step 8: Set the production value** in `packages/backend/wrangler.jsonc` `vars`, after `"GUARDRAIL_TIER": "simple"` (add a comma to the preceding line):
+- [x] **Step 8: Set the production value** in `packages/backend/wrangler.jsonc` `vars`, after `"GUARDRAIL_TIER": "simple"` (add a comma to the preceding line):
 
 ```jsonc
     // Clerk token `azp` allow-list (only used when CLERK_SECRET_KEY is set). .dev.vars overrides locally.
     "CLERK_AUTHORIZED_PARTIES": "https://chatbot.course-projects.ai-web.dev"
 ```
 
-- [ ] **Step 9: Set the local dev value** by appending one line to `packages/backend/.dev.vars`. The file is gitignored; edit it locally and do not commit it.
+- [x] **Step 9: Set the local dev value** by appending one line to `packages/backend/.dev.vars`. The file is gitignored; edit it locally and do not commit it.
 
 ```
 CLERK_AUTHORIZED_PARTIES=http://localhost:5173
@@ -425,7 +425,7 @@ CLERK_AUTHORIZED_PARTIES=http://localhost:5173
 
 (Locally the browser origin is the Vite server on `:5173`, even though the Worker sees `:8787` behind the proxy.)
 
-- [ ] **Step 10: Verify build + dry-run + regression smoke**
+- [x] **Step 10: Verify build + dry-run + regression smoke**
 
 ```bash
 cd /Users/kirittanna/projects/aiwebdev/course-projects/chatbot
@@ -439,7 +439,7 @@ sleep 10; cd ../.. && pnpm run smoke http://localhost:8799; pkill -f "wrangler d
 ```
 Expected: `All checks passed.`
 
-- [ ] **Step 11: Update docs**
+- [x] **Step 11: Update docs**
 
 In `packages/backend/README.md`, Step 4 ("Configure frontend auth"), replace the whole blockquote that starts with `> **Open decision:**` with:
 
@@ -455,7 +455,7 @@ In `AGENTS.md`, Environment Variables table, add after the `CLERK_PUBLISHABLE_KE
 | `CLERK_AUTHORIZED_PARTIES` | No | Comma-separated origins allowed as Clerk token `azp` (prod in `wrangler.jsonc`, `http://localhost:5173` in `.dev.vars`) |
 ```
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add packages/backend/src/auth packages/backend/src/middleware.ts packages/backend/src/types.ts \
@@ -477,7 +477,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Consumes: Worker name `chatbot` (already in `wrangler.jsonc`)
 - Produces: `routes` entry `{ "pattern": "chatbot.course-projects.ai-web.dev", "custom_domain": true }`, which Task 5's deploy uses
 
-- [ ] **Step 1: Add the route** to `packages/backend/wrangler.jsonc`, directly after the `"compatibility_flags"` line:
+- [x] **Step 1: Add the route** to `packages/backend/wrangler.jsonc`, directly after the `"compatibility_flags"` line:
 
 ```jsonc
 
@@ -491,12 +491,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
   "workers_dev": true,
 ```
 
-- [ ] **Step 2: Validate the config**
+- [x] **Step 2: Validate the config**
 
 Run: `cd /Users/kirittanna/projects/aiwebdev/course-projects/chatbot && pnpm run build 2>&1 | tail -12`
 Expected: no `✘ [ERROR]`; ends with `--dry-run: exiting now.`
 
-- [ ] **Step 3: Update docs**
+- [x] **Step 3: Update docs**
 
 In `packages/backend/README.md`, under `### Step 5: Deploy`, replace the fenced block that shows `Uploaded chatbot (x.xx sec)` with:
 
@@ -525,7 +525,7 @@ and add a row to the Commands table after the `pnpm run deploy` row:
 | `pnpm run smoke <url> [--chat] [--expect-clerk]` (root) | Black-box checks against a running Worker (local or deployed) |
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/backend/wrangler.jsonc packages/backend/README.md AGENTS.md
@@ -546,17 +546,17 @@ An operational task: no code changes. **A human must approve the deploy**, becau
 - Consumes: Tasks 2–4 merged into the working branch
 - Produces: live `https://chatbot.course-projects.ai-web.dev` serving the app, with chat working
 
-- [ ] **Step 1: Confirm account**
+- [x] **Step 1: Confirm account**
 
 Run: `cd packages/backend && npx wrangler whoami`
 Expected: account `Enhance Digital LLC` / `9dff37a609d16c31de78f32f94783041`.
 
-- [ ] **Step 2: Confirm the build carries no Clerk key (spec D5)**
+- [x] **Step 2: Confirm the build carries no Clerk key (spec D5)**
 
 Run: `ls packages/frontend/.env* 2>/dev/null` (from repo root)
 Expected: only `packages/frontend/.env.example`. If `.env` or `.env.production` holds a key, move it aside for this deploy.
 
-- [ ] **Step 3: Set required secrets** (interactive; paste each value at the prompt)
+- [x] **Step 3: Set required secrets** (interactive; paste each value at the prompt)
 
 ```bash
 cd packages/backend
@@ -571,12 +571,12 @@ If the Worker does not exist yet, Wrangler asks to create it; answer yes. Do **n
 Run: `npx wrangler secret list`
 Expected: exactly those 4 names.
 
-- [ ] **Step 4: Deploy**
+- [x] **Step 4: Deploy**
 
 Run (repo root): `pnpm run deploy`
 Expected: output ends with the triggers list containing `chatbot.course-projects.ai-web.dev (custom domain)` and `https://chatbot.enhancedigital.workers.dev`.
 
-- [ ] **Step 5: Wait for DNS + certificate** (Review Focus #2). Polls for up to 10 minutes:
+- [x] **Step 5: Wait for DNS + certificate** (Review Focus #2). Polls for up to 10 minutes:
 
 ```bash
 for i in $(seq 1 40); do
@@ -586,7 +586,7 @@ done
 ```
 Expected: `up after …s`. If it never comes up, check Cloudflare dashboard → Workers → `chatbot` → Settings → Domains & Routes, and SSL/TLS → Edge Certificates for a pending certificate.
 
-- [ ] **Step 6: Smoke both URLs** (Review Focus #3)
+- [x] **Step 6: Smoke both URLs** (Review Focus #3)
 
 ```bash
 pnpm run smoke https://chatbot.course-projects.ai-web.dev --chat
@@ -594,11 +594,11 @@ pnpm run smoke https://chatbot.enhancedigital.workers.dev
 ```
 Expected: `All checks passed.` for both. If `chat stream completes` fails, run `cd packages/backend && npx wrangler tail --status error` in another terminal, re-run the smoke test, and read the error (usually a missing secret).
 
-- [ ] **Step 7: Check telemetry**
+- [x] **Step 7: Check telemetry**
 
 Open the Langfuse dashboard (US region). Expected: a trace for the smoke-test chat with session id `smoke-test` and no user id.
 
-- [ ] **Step 8: Rollback reference (only if needed)**
+- [x] **Step 8: Rollback reference (only if needed)**
 
 `cd packages/backend && npx wrangler rollback` returns to the previous version. There is none on a first deploy, so instead fix forward and redeploy with `pnpm run deploy`.
 
@@ -615,7 +615,7 @@ Spec D8 and Review Focus #5.
 - Consumes: verified custom domain from Task 5
 - Produces: Worker reachable only at `https://chatbot.course-projects.ai-web.dev`
 
-- [ ] **Step 1: Disable workers.dev and preview URLs.** In `packages/backend/wrangler.jsonc`, replace the two comment lines and `"workers_dev": true,` added in Task 4 with:
+- [x] **Step 1: Disable workers.dev and preview URLs.** In `packages/backend/wrangler.jsonc`, replace the two comment lines and `"workers_dev": true,` added in Task 4 with:
 
 ```jsonc
   // Single canonical origin: the workers.dev origin is not in CLERK_AUTHORIZED_PARTIES.
@@ -623,22 +623,22 @@ Spec D8 and Review Focus #5.
   "preview_urls": false,
 ```
 
-- [ ] **Step 2: Deploy**
+- [x] **Step 2: Deploy**
 
 Run (repo root): `pnpm run deploy`
 Expected: the triggers list shows only `chatbot.course-projects.ai-web.dev (custom domain)`. No `workers.dev` URL appears.
 
-- [ ] **Step 3: Verify workers.dev no longer serves the app**
+- [x] **Step 3: Verify workers.dev no longer serves the app**
 
 Run: `pnpm run smoke https://chatbot.enhancedigital.workers.dev; echo "exit=$?"`
 Expected: `exit=1` (connection failure, or `/` not returning the app's HTML). It must **not** print `All checks passed.`
 
-- [ ] **Step 4: Verify the custom domain still works**
+- [x] **Step 4: Verify the custom domain still works**
 
 Run: `pnpm run smoke https://chatbot.course-projects.ai-web.dev`
 Expected: `All checks passed.`
 
-- [ ] **Step 5: Update README.** In `packages/backend/README.md` Step 5, replace the triggers code block from Task 4 with:
+- [x] **Step 5: Update README.** In `packages/backend/README.md` Step 5, replace the triggers code block from Task 4 with:
 
 ````markdown
 ```
@@ -650,7 +650,7 @@ Deployed chatbot triggers (x.xx sec)
 `workers_dev` and `preview_urls` are disabled so the custom domain is the only origin (it is the only one in `CLERK_AUTHORIZED_PARTIES`).
 ````
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add packages/backend/wrangler.jsonc packages/backend/README.md
@@ -672,15 +672,15 @@ Spec D5/D6. Partly manual, in the dashboards. **A human must do Steps 1–4**: C
 - Consumes: live custom domain (Tasks 5–6); `CLERK_AUTHORIZED_PARTIES` wiring (Task 3)
 - Produces: signed-in users' Clerk `userId` on Langfuse traces in production
 
-- [ ] **Step 1: Create the production instance.** In the Clerk dashboard for this application, create a **Production** instance and set the domain to `chatbot.course-projects.ai-web.dev` (spec D6). This scopes sessions to this project instead of all `*.ai-web.dev`.
+- [x] **Step 1: Create the production instance.** In the Clerk dashboard for this application, create a **Production** instance and set the domain to `chatbot.course-projects.ai-web.dev` (spec D6). This scopes sessions to this project instead of all `*.ai-web.dev`.
 
-- [ ] **Step 2: Add Clerk's DNS records.** Clerk → Configure → **Domains** lists the CNAME records it needs. Add each one exactly as shown in Cloudflare dashboard → `ai-web.dev` → DNS → Records, with Proxy status **DNS only** (grey cloud). Clerk issues its own certificates for these hosts, and proxying breaks that.
+- [x] **Step 2: Add Clerk's DNS records.** Clerk → Configure → **Domains** lists the CNAME records it needs. Add each one exactly as shown in Cloudflare dashboard → `ai-web.dev` → DNS → Records, with Proxy status **DNS only** (grey cloud). Clerk issues its own certificates for these hosts, and proxying breaks that.
 
-- [ ] **Step 3: Wait for verification.** In Clerk → Domains, wait until every record and the SSL certificates show verified/issued.
+- [x] **Step 3: Wait for verification.** In Clerk → Domains, wait until every record and the SSL certificates show verified/issued.
 
-- [ ] **Step 4: Social login (only if enabled).** Production instances do not use Clerk's shared OAuth credentials. For each enabled social provider, add your own client ID and secret in Clerk → SSO connections.
+- [x] **Step 4: Social login (only if enabled).** Production instances do not use Clerk's shared OAuth credentials. For each enabled social provider, add your own client ID and secret in Clerk → SSO connections.
 
-- [ ] **Step 5: Bake the publishable key into the frontend build.** Create `packages/frontend/.env.production` with the production key from Clerk → API keys:
+- [x] **Step 5: Bake the publishable key into the frontend build.** Create `packages/frontend/.env.production` with the production key from Clerk → API keys:
 
 ```
 VITE_CLERK_PUBLISHABLE_KEY=pk_live_<value copied from Clerk dashboard>
@@ -688,7 +688,7 @@ VITE_CLERK_PUBLISHABLE_KEY=pk_live_<value copied from Clerk dashboard>
 
 Publishable keys are public, so committing this file is intended. It is not matched by `.gitignore` (`.env` and `*.local` only).
 
-- [ ] **Step 6: Set backend secrets** (interactive)
+- [x] **Step 6: Set backend secrets** (interactive)
 
 ```bash
 cd packages/backend
@@ -696,23 +696,23 @@ npx wrangler secret put CLERK_SECRET_KEY        # sk_live_… from Clerk → API
 npx wrangler secret put CLERK_PUBLISHABLE_KEY   # same pk_live_… as Step 5
 ```
 
-- [ ] **Step 7: Deploy**
+- [x] **Step 7: Deploy**
 
 Run (repo root): `pnpm run deploy`
 
-- [ ] **Step 8: Smoke with the Clerk check** (Review Focus #4)
+- [x] **Step 8: Smoke with the Clerk check** (Review Focus #4)
 
 Run: `pnpm run smoke https://chatbot.course-projects.ai-web.dev --chat --expect-clerk`
 Expected: `PASS  Clerk production publishable key baked into bundle` and `All checks passed.` (A `pk_test_` key fails this check on purpose.)
 
-- [ ] **Step 9: Manual sign-in check**
+- [x] **Step 9: Manual sign-in check**
 
 1. Open `https://chatbot.course-projects.ai-web.dev` in a private window. Expected: a **Sign in** button in the header, and no Clerk "development mode" banner.
 2. Sign in, then send "hello". Expected: a streamed reply.
 3. Langfuse → Traces → newest trace. Expected: `langfuse.user.id` is set to the Clerk user id (`user_…`).
 4. In another terminal: `cd packages/backend && npx wrangler tail`. Expected: while sending a message signed-in, no `Clerk auth failed` warnings appear. If one shows an `azp`/authorized-parties error, compare the browser's origin with `CLERK_AUTHORIZED_PARTIES` in `wrangler.jsonc`.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add packages/frontend/.env.production
