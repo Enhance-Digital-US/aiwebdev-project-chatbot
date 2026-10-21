@@ -49,7 +49,7 @@ Tools are merged into `streamText()` along with MCP tools, the `loadSkill` tool,
 Connects to external MCP servers and exposes their tools alongside local tools. Two implementations behind one `McpToolLoader` interface:
 
 - `ai-sdk-loader.ts` — uses `@ai-sdk/mcp` `createMCPClient`
-- `raw-loader.ts` — hand-rolled Streamable HTTP client (~200 lines)
+- `raw-loader.ts` — hand-rolled dual-era Streamable HTTP client. Tries stateless MCP `2026-07-28` first (per-request `_meta`, `Mcp-Method`/`Mcp-Name`/`Mcp-Param-*` headers, no sessions) and falls back to the legacy `initialize` + `Mcp-Session-Id` flow at `2025-11-25` when the server isn't modern (e.g. DeepWiki). Legacy servers are cached per URL for the isolate's lifetime.
 
 Selected via `MCP_IMPL` env var (default: `"raw"`). Server list is static in `mcp/config.ts`. Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions.
 
