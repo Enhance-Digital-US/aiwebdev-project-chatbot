@@ -8,7 +8,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ai-sdk/mcp": "^2.0.54",
+    "@ai-sdk/mcp": "^2.0.80",
     "@ai-sdk/openai": "^4.0.16",
     "@ai-sdk/otel": "^1.0.105",
     "@cloudflare/sandbox": "^0.12.9",
