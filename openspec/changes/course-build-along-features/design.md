@@ -1,0 +1,136 @@
+# Design
+
+## Context
+
+See proposal.md for motivation. Constraints:
+
+- **Course lessons.** Each feature below is taught in one ai-web.dev module 02 lesson, and `course-checkpoint-history` later replays them one lesson at a time. Each feature therefore has to land as a self-contained slice that a reader can follow in a single lesson.
+- **The issue-tracker server** (mcp-server `add-simulated-roles-oauth`):
+  - It runs on `localhost:8787` and refuses any other Host.
+  - Its dev-token endpoint (`POST /auth/dev-token {sub, scope}`) works in development only.
+  - Access tokens expire after 1 hour. Refresh tokens are issued and last up to 7 days.
+  - It accepts CIMD and dynamic client registration (DCR).
+  - `create_issue` requires the `admin` or `member` role.
+- **Cloudflare Access** guards the whole deployed hostname, which would also block the issue tracker from fetching a CIMD document.
+- **The raw MCP client** speaks `2026-07-28` with a legacy fallback, and currently throws on `input_required`.
+
+## Goals / Non-Goals
+
+**Goals:** every capability in the proposal, each in its lesson's slice, with the app staying runnable after every slice.
+
+**Non-Goals:**
+- Images in bug reports (text only, by course decision).
+- Sharing conversations between users.
+- Per-user OAuth before lesson 19: lessons 13–18 run locally on dev tokens, by course decision ("hybrid").
+- Supporting MRTR input kinds other than elicitation (sampling, roots).
+
+## Decisions
+
+### 1. Lesson slices
+
+| Lesson (ai-web.dev, new numbering) | Slice |
+|---|---|
+| 07 Model Selection | AI Gateway routing for hosted providers |
+| 09 Prompt Engineering | `prompts/system.ts`, the Team Assistant persona |
+| 10 Structured Data | suggestions and titles (title shown in the header, in memory) |
+| 13 MCP | `issue-tracker` server entry, dev-token credentials, MRTR elicitation and confirmation card |
+| 16 Durable Workflows | bug-report workflow, status and decision routes, workflow card |
+| 17 Guardrails | (existing guardrails) plus a redaction check in the safety suite's fixtures |
+| 18 Evals | new eval cases |
+| 19 Infra & Security | D1 persistence and sidebar, per-user OAuth to the issue tracker, the Access bypass for client metadata, the token store |
+| 20 Cost and Budget | usage metadata, price table, cost meter, per-chat cap (in D1), gateway caching |
+
+Port 8788 and `.dev.vars.example` belong to the scaffold (lesson 03), so they're present from the first checkpoint.
+
+### 2. Port 8788 for the backend
+
+The backend moves to 8788, and the Vite proxy and the evals provider follow. *Alternative:* move the issue-tracker server instead. Rejected: its README walkthrough, the OAuth metadata and the Host check all assume 8787, and it isn't being rebuilt.
+
+### 3. AI Gateway
+
+OpenAI is created with the gateway's OpenAI-compatible base URL (account id + gateway name from vars, gateway token as a secret). The model registry's shape is unchanged; only `createModel` changes. Ollama stays direct.
+
+### 4. Suggestions and titles in the same response
+
+The chat route uses `createUIMessageStream`:
+1. It merges the `streamText` stream.
+2. Once that finishes, it runs one small structured-output call (Zod: `{ suggestions: string[3], title?: string }`, with `title` only requested on the first exchange).
+3. It writes the result as a typed data part.
+
+A failed parse writes nothing. *Alternative:* a second request from the browser. Rejected: it needs another round trip and another route for the same context.
+
+### 5. Issue-tracker credentials: a credential source per server
+
+Server entries gain an optional `credential` function that the loader calls per request, `(env, user) => Promise<headers>`.
+- **Development:** mint from `/auth/dev-token` for `ISSUE_TRACKER_PERSONA` (default `user-bob` / `member`), cached in memory until 60 s before expiry.
+- **Deployed (lesson 19):** read the user's record from D1, refresh it if it's expired, and return the bearer token. If there's no record, the server is skipped and the assistant is told how to connect.
+
+### 6. MRTR elicitation
+
+When the raw client sees `resultType: "input_required"` with `elicitation/create` requests, it returns them as a tool result of kind `input-required`, with the server's `requestState`. It doesn't throw.
+
+The UI renders this as a confirmation card. The user's answer goes back as the next tool call's `inputResponses` through an AI SDK tool approval. Any other input kind still throws, as today.
+
+The `ai-sdk` loader stays unchanged. Its limitation is documented as a lesson-13 contrast between the two loaders.
+
+### 7. Bug-report workflow
+
+```
+fileBugReport({ log ≤ 20k, note? }) → env.BUG_REPORT.create({ params: { log, note, userId, chatId } })
+run(event, step):
+  redact  = step.do("redact", …)                          // pure, no model
+  draft   = step.do("draft", { retries: 3 }, …)           // structured output → BugDraft
+  dupes   = step.do("dedupe", …)                          // issue-tracker search_issues
+  verdict = step.waitForEvent("approval", { type: "bug-approval", timeout: "24 hours" })
+  result  = step.do("file", …)                            // create_issue { …draft, external_id: instanceId }
+GET  /api/workflows/:id           → status, step, draft, dupes, result
+POST /api/workflows/:id/decision  → instance.sendEvent({ type: "bug-approval", payload: { decision, edits } })
+```
+
+- **Credentials:** no token is ever put in the workflow's parameters or event payloads, because those persist in the instance history. The `file` and `dedupe` steps get credentials through the same source as chat (Decision 5), using the `userId` from the parameters.
+- **Role refusal:** a role refusal from `create_issue` throws `NonRetryableError`, giving the `not-permitted` status.
+- **Rejected or expired:** these end the run without filing.
+- **Who may decide:** the decision route compares the caller's Access identity with the `userId` in the parameters. In development, with no identity, any caller may decide.
+
+*Alternatives:* a screenshot as input (rejected: text-only course); a research report (rejected: it has no human step to teach `waitForEvent`).
+
+### 8. Persistence (lesson 19)
+
+D1 tables:
+- `chats` (id, user_id, title, token_total, updated_at)
+- `messages` (chat_id, seq, ui_message JSON)
+- `chat_workflows` (chat_id, instance_id)
+- `issue_tracker_tokens` (user_id, refresh_token_enc, access_token_enc, expires_at)
+
+Tokens are encrypted with AES-GCM using a `TOKEN_ENCRYPTION_KEY` secret. The chat route saves the conversation when the stream ends. The sidebar reads `GET /api/chats`.
+
+### 9. Per-user OAuth (lesson 19)
+
+- **CIMD document:** served at `/oauth/client-metadata.json`. An Access application with a bypass policy for that one path keeps it reachable without login; this is configured in the Access dashboard and documented.
+- **Login flow:** `/oauth/connect` starts authorization code + PKCE against the issue tracker. `/oauth/callback` stores the tokens.
+- **DCR fallback:** if CIMD fails against the server, DCR is used instead. DCR is also the local fallback, since CIMD fetches of `localhost` are refused by `global_fetch_strictly_public`.
+
+*Alternative:* keep using dev tokens when deployed. Impossible: the endpoint is development-only and fails closed.
+
+### 10. Usage and cost (lesson 20)
+
+- **Usage:** `streamText`'s `totalUsage` is attached as message metadata on finish.
+- **Prices:** live in a `price` field on each model registry entry (USD per 1M input, cached-input and output tokens). A missing price means "unknown".
+- **Token cap:** `chats.token_total` is checked before the model call, and `CHAT_TOKEN_CAP` comes from vars.
+- **Caching:** uses AI Gateway's cache headers on eligible requests. Cached tokens come from the provider's usage report.
+
+## Risks / Trade-offs
+
+- [The AI SDK's tool-approval API may not map cleanly onto MRTR retries] → spike first in the lesson-13 slice; fall back to a dedicated `/api/mcp/answer` route if needed.
+- [The Workflows API differs from Decision 7's sketch] → spike create / waitForEvent / sendEvent / status before the lesson-16 slice.
+- [CIMD fetch is blocked by Access or by strictly-public fetch] → the Access path bypass (deployed); DCR fallback (both).
+- [Refresh tokens expire after 7 days, before a long-idle user approves] → the approval window is 24 hours, so this can't happen during one workflow; reconnecting is the documented fix otherwise.
+- [Storing OAuth tokens is a security-sensitive addition] → tokens are encrypted at rest, never sent to the browser, and deleted when the user disconnects.
+
+## Migration Plan
+
+Land the slices in lesson order on `main`, each with its tests and docs. Then `course-checkpoint-history` rebuilds the tagged history. Deployed: apply the D1 schema, set the new secrets, configure the Access bypass, then deploy.
+
+## Open Questions
+
+- The exact gateway name and account id for the course's AI Gateway. These are config values and don't change the design.
