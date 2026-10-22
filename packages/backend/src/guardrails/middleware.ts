@@ -28,8 +28,9 @@ function buildRefusalMessage(categories: string[]): string {
     );
   }
 
-  const labels = categories.map(categoryLabel).join(", ");
-  return `I'm not able to help with that request. The content was flagged for: ${labels}. Let me know if there's something else I can assist with.`;
+  // Categories stay server-side (logged at the call site): naming them in the
+  // reply tells an attacker which detector fired and how to rephrase around it.
+  return "I'm not able to help with that request. Let me know if there's something else I can assist with.";
 }
 
 export function createGuardrailMiddleware(
@@ -66,6 +67,9 @@ export function createGuardrailMiddleware(
 
     wrapStream: async ({ doStream }) => {
       if (blockedResult) {
+        console.warn(
+          `Guardrail blocked input: ${blockedResult.categories.map(categoryLabel).join(", ")}`,
+        );
         const refusal = buildRefusalMessage(blockedResult.categories);
         blockedResult = null;
 

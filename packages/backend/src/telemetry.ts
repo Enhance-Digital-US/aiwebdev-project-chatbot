@@ -73,6 +73,9 @@ const enrichSpan: EnrichSpan = ({ runtimeContext }) => {
   if (typeof runtimeContext.userId === "string") {
     attrs["langfuse.user.id"] = runtimeContext.userId;
   }
+  if (typeof runtimeContext.promptVersion === "string") {
+    attrs["langfuse.trace.metadata.prompt_version"] = runtimeContext.promptVersion;
+  }
   return Object.keys(attrs).length > 0 ? attrs : undefined;
 };
 

@@ -4,7 +4,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 1. Scaffold-level changes
 
-- [ ] 1.1 Move the backend to port 8788 (wrangler dev, Vite proxy, evals `CHATBOT_URL` default, README, AGENTS.md); verify `pnpm dev` serves chat through `localhost:5173` while the issue-tracker server runs on 8787
+- [x] 1.1 Move the backend to port 8788 (wrangler dev, Vite proxy, evals `CHATBOT_URL` default, README, AGENTS.md); verify `pnpm dev` serves chat through `localhost:5173` while the issue-tracker server runs on 8787
 - [x] 1.2 Add `packages/backend/.dev.vars.example` covering every variable the backend reads, with placeholders; verify that a fresh clone with the example copied to `.dev.vars` starts, and that `git ls-files` doesn't list `.dev.vars`
 
 ## 2. Lesson 07: AI Gateway
@@ -13,7 +13,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 3. Lesson 09: persona prompt
 
-- [ ] 3.1 Move the system prompt into `prompts/system.ts` as the Team Assistant persona, keeping the decoded-content rule and the skill catalog; verify the "encoded instruction" safety cases and the quality suite still meet their thresholds
+- [x] 3.1 Move the system prompt into `prompts/system.ts` as the Team Assistant persona, keeping the decoded-content rule and the skill catalog; verify the "encoded instruction" safety cases and the quality suite still meet their thresholds
 
 ## 4. Lesson 10: structured output
 

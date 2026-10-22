@@ -41,6 +41,7 @@ This chatbot is the build-along project for module 02 of the ai-web.dev course (
   - MRTR elicitation instead of an error
 - `deployment`: the local backend port, the `.dev.vars.example` file, and the Workflow and D1 bindings in every environment.
 - `evals`: coverage for the issue tracker, the bug-report tool and redaction.
+- `guardrails`: the refusal no longer names the flagged categories (they're logged server-side instead). Found while verifying the persona slice: the safety suite's "disregard prior instructions" case failed on the category name.
 
 ## Impact
 
