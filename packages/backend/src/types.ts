@@ -3,6 +3,12 @@ import type { Sandbox } from "@cloudflare/sandbox";
 export type AppEnv = {
   Bindings: {
     OPENAI_API_KEY: string;
+    /** Cloudflare account that owns the AI Gateway (wrangler.jsonc vars) */
+    AI_GATEWAY_ACCOUNT_ID: string;
+    /** AI Gateway name (wrangler.jsonc vars) */
+    AI_GATEWAY_NAME: string;
+    /** Token for an authenticated gateway, sent as cf-aig-authorization (secret) */
+    AI_GATEWAY_TOKEN?: string;
     LANGFUSE_PUBLIC_KEY: string;
     LANGFUSE_SECRET_KEY: string;
     /** Langfuse region host (default: https://us.cloud.langfuse.com) */

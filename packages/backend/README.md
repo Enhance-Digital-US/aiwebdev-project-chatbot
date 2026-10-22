@@ -24,23 +24,15 @@ pnpm install
 
 ### 2. Configure environment variables
 
-Create `packages/backend/.dev.vars` (gitignored):
+Copy the example file to `packages/backend/.dev.vars` (gitignored) and fill in your keys:
 
-```env
-OPENAI_API_KEY=sk-proj-your-openai-key
-LANGFUSE_PUBLIC_KEY=pk-lf-your-langfuse-public-key
-LANGFUSE_SECRET_KEY=sk-lf-your-langfuse-secret-key
-
-# Optional — MCP client implementation ("raw" or "ai-sdk", default: "raw")
-MCP_IMPL=raw
-
-# Optional — Guardrail tier ("simple", "local", "cloud", or "none", default: "none")
-GUARDRAIL_TIER=simple
-
-# Optional — Sandbox code execution ("e2b", "cloudflare", or omit for stub)
-SANDBOX_PROVIDER=e2b
-E2B_API_KEY=e2b_your-api-key
+```bash
+cp .dev.vars.example .dev.vars
 ```
+
+`.dev.vars.example` lists every variable the backend reads, with comments. At minimum set `OPENAI_API_KEY`, `AI_GATEWAY_TOKEN`, `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY`.
+
+Every OpenAI call goes through **Cloudflare AI Gateway**. The account id and gateway name are `AI_GATEWAY_ACCOUNT_ID` / `AI_GATEWAY_NAME` in `wrangler.jsonc` `vars` (override them in `.dev.vars` to use your own gateway). The gateway is authenticated: create a token under **AI Gateway → your gateway → Settings → Authentication** and set it as `AI_GATEWAY_TOKEN`.
 
 Get your Langfuse keys from: **Langfuse Dashboard → Settings → API Keys**
 
@@ -84,6 +76,7 @@ Secrets are encrypted and stored by Cloudflare — they're never in your code or
 ```bash
 # Required — run each command and paste the key value when prompted:
 npx wrangler secret put OPENAI_API_KEY
+npx wrangler secret put AI_GATEWAY_TOKEN
 npx wrangler secret put LANGFUSE_PUBLIC_KEY
 npx wrangler secret put LANGFUSE_SECRET_KEY
 
@@ -396,6 +389,9 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
 | `OPENAI_API_KEY` | Yes | — | OpenAI model + moderation API (simple guardrail tier) |
+| `AI_GATEWAY_ACCOUNT_ID` | Yes | `wrangler.jsonc` vars | Cloudflare account that owns the AI Gateway |
+| `AI_GATEWAY_NAME` | Yes | `wrangler.jsonc` vars | AI Gateway that OpenAI calls go through |
+| `AI_GATEWAY_TOKEN` | Yes | — | Gateway auth token (`cf-aig-authorization`), a secret |
 | `LANGFUSE_PUBLIC_KEY` | Yes | — | Langfuse telemetry |
 | `LANGFUSE_SECRET_KEY` | Yes | — | Langfuse telemetry |
 | `MCP_IMPL` | No | `raw` | MCP client implementation: `"raw"` or `"ai-sdk"` |

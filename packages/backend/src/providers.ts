@@ -11,10 +11,28 @@ export type ModelConfig = {
   telemetryId: string;
 };
 
+/**
+ * Hosted providers go through Cloudflare AI Gateway (logs, caching, rate limits).
+ * The gateway's OpenAI endpoint is OpenAI-compatible, so only the base URL changes;
+ * the provider key still authenticates with OpenAI, and the gateway token with the gateway.
+ */
+export function gatewayOpenAIConfig(env: AppEnv["Bindings"]) {
+  return {
+    apiKey: env.OPENAI_API_KEY,
+    baseURL: `https://gateway.ai.cloudflare.com/v1/${env.AI_GATEWAY_ACCOUNT_ID}/${env.AI_GATEWAY_NAME}/openai`,
+    headers: env.AI_GATEWAY_TOKEN
+      ? { "cf-aig-authorization": `Bearer ${env.AI_GATEWAY_TOKEN}` }
+      : undefined,
+  };
+}
+
+export function createGatewayOpenAI(env: AppEnv["Bindings"]) {
+  return createOpenAI(gatewayOpenAIConfig(env));
+}
+
 const models: Record<string, ModelConfig> = {
   "gpt-4o-mini": {
-    createModel: (env) =>
-      createOpenAI({ apiKey: env.OPENAI_API_KEY })("gpt-4o-mini"),
+    createModel: (env) => createGatewayOpenAI(env)("gpt-4o-mini"),
     telemetryId: "openai-chat",
   },
   "gemma4:12b": {

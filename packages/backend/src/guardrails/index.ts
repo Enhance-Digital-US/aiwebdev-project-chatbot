@@ -1,4 +1,5 @@
 import type { AppEnv } from "../types";
+import { gatewayOpenAIConfig } from "../providers";
 import type { SafetyChecker } from "./checker";
 import { createSimpleChecker } from "./simple";
 import { createLocalChecker } from "./local";
@@ -17,7 +18,7 @@ export function createGuardrailChecker(
 
   switch (tier) {
     case "simple":
-      return createSimpleChecker(env.OPENAI_API_KEY);
+      return createSimpleChecker(gatewayOpenAIConfig(env));
     case "local":
       return createLocalChecker(env.OLLAMA_BASE_URL);
     case "cloud":

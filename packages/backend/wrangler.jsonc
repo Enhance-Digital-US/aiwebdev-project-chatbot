@@ -33,6 +33,10 @@
   },
 
   "vars": {
+    // Cloudflare AI Gateway that every hosted model call goes through.
+    // The gateway is authenticated: set the AI_GATEWAY_TOKEN secret.
+    "AI_GATEWAY_ACCOUNT_ID": "9dff37a609d16c31de78f32f94783041",
+    "AI_GATEWAY_NAME": "default",
     "MCP_IMPL": "raw",
     // Set to "e2b" or "cloudflare" to enable real sandbox execution (default: stub)
     // "e2b" requires the E2B_API_KEY secret.
@@ -63,6 +67,6 @@
   ]
 
   // Secrets (set with `wrangler secret put <NAME>`, never commit):
-  //   OPENAI_API_KEY, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY,
+  //   OPENAI_API_KEY, AI_GATEWAY_TOKEN, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY,
   //   E2B_API_KEY
 }

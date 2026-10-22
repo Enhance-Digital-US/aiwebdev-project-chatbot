@@ -9,6 +9,13 @@
 # OpenAI: chat model + the Moderation API used by the "simple" guardrail tier
 OPENAI_API_KEY=sk-your-openai-key
 
+# Cloudflare AI Gateway: every OpenAI call goes through it. Account id and
+# gateway name are in wrangler.jsonc vars (override them here for your own
+# gateway); the token comes from the gateway's Settings → Authentication.
+AI_GATEWAY_TOKEN=your-ai-gateway-token
+# AI_GATEWAY_ACCOUNT_ID=your-cloudflare-account-id
+# AI_GATEWAY_NAME=your-gateway-name
+
 # Langfuse tracing (https://langfuse.com → project settings → API keys)
 LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
 LANGFUSE_SECRET_KEY=sk-lf-your-secret-key

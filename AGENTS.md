@@ -30,7 +30,7 @@ Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course
 
 Model registry keyed by model ID. Each entry defines `createModel`, optional `providerOptions`, `sendReasoning`, `supportsTools`, and `telemetryId`.
 
-Current models: `gpt-4o-mini` (OpenAI), `gemma4:12b` (Ollama with reasoning).
+Current models: `gpt-4o-mini` (OpenAI, routed through Cloudflare AI Gateway via `createGatewayOpenAI`), `gemma4:12b` (Ollama with reasoning, called directly).
 
 **To add a model**: add an entry to the `models` record in `providers.ts`.
 
@@ -123,11 +123,14 @@ PRs are gated on these thresholds. Evals require the dev server running.
 
 ## Environment Variables
 
-All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local dev, CF Worker secrets for production.
+All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `.dev.vars.example`) for local dev, CF Worker secrets for production.
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `OPENAI_API_KEY` | Yes | OpenAI model + moderation API |
+| `AI_GATEWAY_ACCOUNT_ID` | Yes | Cloudflare account owning the AI Gateway, set in `wrangler.jsonc` `vars` |
+| `AI_GATEWAY_NAME` | Yes | AI Gateway that OpenAI calls are routed through, set in `wrangler.jsonc` `vars` |
+| `AI_GATEWAY_TOKEN` | Yes | AI Gateway auth token (sent as `cf-aig-authorization`) |
 | `LANGFUSE_PUBLIC_KEY` | Yes | Langfuse telemetry |
 | `LANGFUSE_SECRET_KEY` | Yes | Langfuse telemetry |
 | `LANGFUSE_BASE_URL` | No | Langfuse region host (default: `https://us.cloud.langfuse.com`) |

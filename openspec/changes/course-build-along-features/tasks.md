@@ -5,7 +5,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 ## 1. Scaffold-level changes
 
 - [ ] 1.1 Move the backend to port 8788 (wrangler dev, Vite proxy, evals `CHATBOT_URL` default, README, AGENTS.md); verify `pnpm dev` serves chat through `localhost:5173` while the issue-tracker server runs on 8787
-- [ ] 1.2 Add `packages/backend/.dev.vars.example` covering every variable the backend reads, with placeholders; verify that a fresh clone with the example copied to `.dev.vars` starts, and that `git ls-files` doesn't list `.dev.vars`
+- [x] 1.2 Add `packages/backend/.dev.vars.example` covering every variable the backend reads, with placeholders; verify that a fresh clone with the example copied to `.dev.vars` starts, and that `git ls-files` doesn't list `.dev.vars`
 
 ## 2. Lesson 07: AI Gateway
 

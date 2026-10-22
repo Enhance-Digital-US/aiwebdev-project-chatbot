@@ -30,18 +30,26 @@ function regexCheck(text: string): SafetyResult {
   return { safe: true, categories: [] };
 }
 
-export function createSimpleChecker(openaiApiKey: string): SafetyChecker {
+/** OpenAI credentials and the AI Gateway base URL (see providers.ts `gatewayOpenAIConfig`). */
+interface OpenAIConfig {
+  apiKey: string;
+  baseURL: string;
+  headers?: Record<string, string>;
+}
+
+export function createSimpleChecker(openai: OpenAIConfig): SafetyChecker {
   return async (messages: GuardMessage[]): Promise<SafetyResult> => {
     const text = messages.map((m) => m.content).join("\n");
 
     const regex = regexCheck(text);
     if (!regex.safe) return regex;
 
-    const res = await fetch("https://api.openai.com/v1/moderations", {
+    const res = await fetch(`${openai.baseURL}/moderations`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${openaiApiKey}`,
+        Authorization: `Bearer ${openai.apiKey}`,
+        ...openai.headers,
       },
       body: JSON.stringify({ input: text }),
     });
