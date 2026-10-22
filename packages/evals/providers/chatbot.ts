@@ -1,6 +1,6 @@
 import type { ApiProvider, ProviderResponse } from "promptfoo";
 
-const CHATBOT_URL = process.env.CHATBOT_URL ?? "http://localhost:8787";
+const CHATBOT_URL = process.env.CHATBOT_URL ?? "http://localhost:8788";
 
 export default class ChatbotProvider implements ApiProvider {
   private modelId: string;

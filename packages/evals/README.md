@@ -119,7 +119,7 @@ Promptfoo evals hit the live chatbot endpoint, so the backend must be running:
 pnpm --filter backend dev
 ```
 
-This starts the Wrangler dev server at `http://localhost:8787`.
+This starts the Wrangler dev server at `http://localhost:8788`.
 
 ### Promptfoo (primary)
 
@@ -181,7 +181,7 @@ See the full guide at [`docs/garak-red-teaming.md`](docs/garak-red-teaming.md). 
 pip install garak
 
 garak --model-type rest \
-  --model-name http://localhost:8787/api/chat \
+  --model-name http://localhost:8788/api/chat \
   --probes dan,encoding \
   --generations 5
 ```
@@ -191,7 +191,7 @@ garak --model-type rest \
 | Variable | Required For | Default | Description |
 |----------|-------------|---------|-------------|
 | `OPENAI_API_KEY` | Promptfoo, Braintrust | — | Powers the chatbot and LLM-as-judge grading |
-| `CHATBOT_URL` | Promptfoo, Braintrust | `http://localhost:8787` | Chatbot endpoint for eval provider |
+| `CHATBOT_URL` | Promptfoo, Braintrust | `http://localhost:8788` | Chatbot endpoint for eval provider |
 | `BRAINTRUST_API_KEY` | Braintrust | — | Braintrust API key for experiment tracking |
 | `LANGFUSE_PUBLIC_KEY` | Langfuse | — | Langfuse project public key |
 | `LANGFUSE_SECRET_KEY` | Langfuse | — | Langfuse project secret key |

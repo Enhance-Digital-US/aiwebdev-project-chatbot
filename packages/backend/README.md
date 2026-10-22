@@ -50,12 +50,12 @@ Get your Langfuse keys from: **Langfuse Dashboard → Settings → API Keys**
 pnpm --filter backend dev
 ```
 
-The API runs at `http://localhost:8787`.
+The API runs at `http://localhost:8788`.
 
 ### 4. Test
 
 ```bash
-curl -X POST http://localhost:8787/api/chat \
+curl -X POST http://localhost:8788/api/chat \
   -H "Content-Type: application/json" \
   -d '{"messages":[{"role":"user","parts":[{"type":"text","text":"Hello"}]}]}'
 ```

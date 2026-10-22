@@ -15,6 +15,12 @@
   "workers_dev": false,
   "preview_urls": false,
 
+  // 8787 is reserved for the course's issue-tracker MCP server, which rejects any
+  // other Host. The Vite proxy and the evals provider point here.
+  "dev": {
+    "port": 8788
+  },
+
   // Single-Worker deployment: the Vite build is served as static assets and
   // only /api/* reaches the Hono app. Everything else falls back to index.html
   // so TanStack Router can handle client-side routes.

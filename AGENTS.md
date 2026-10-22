@@ -12,7 +12,7 @@ AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a si
 
 | Command | What it does |
 |---------|-------------|
-| `pnpm dev` (root) | Starts backend (wrangler, :8787) + frontend (vite, :5173) via concurrently |
+| `pnpm dev` (root) | Starts backend (wrangler, :8788) + frontend (vite, :5173) via concurrently |
 | `pnpm build` (root) | Builds frontend, then backend (backend dry-run bundles `frontend/dist` as assets) |
 | `pnpm run deploy` (root) | Build + `wrangler deploy` (not `pnpm deploy` — that's a pnpm built-in) |
 | `pnpm eval` (packages/evals) | Run all Promptfoo eval suites |
@@ -20,7 +20,7 @@ AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a si
 | `pnpm eval:quality` | Quality suite only |
 | `pnpm eval:tools` | Tool use suite only |
 
-Vite proxies `/api` to `localhost:8787` in dev. In production the same Worker serves the SPA from static assets (`not_found_handling: single-page-application`) and runs Hono only for `/api/*` (`run_worker_first`) — same origin, so no CORS.
+Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course issue-tracker MCP server). In production the same Worker serves the SPA from static assets (`not_found_handling: single-page-application`) and runs Hono only for `/api/*` (`run_worker_first`) — same origin, so no CORS.
 
 ## Backend Subsystems (`packages/backend/src/`)
 
@@ -136,7 +136,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored) for local de
 | `OLLAMA_BASE_URL` | No | Ollama URL for local guardrails (default: `http://localhost:11434`) |
 | `SANDBOX_PROVIDER` | No | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
 | `E2B_API_KEY` | No | Required when `SANDBOX_PROVIDER=e2b` |
-| `CHATBOT_URL` | No | Eval provider target (default: `http://localhost:8787`) |
+| `CHATBOT_URL` | No | Eval provider target (default: `http://localhost:8788`) |
 | `PROMPTFOO_GRADER_MODEL` | No | LLM-as-judge model (default: `openai:gpt-4o-mini`) |
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
 | `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |

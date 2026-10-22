@@ -41,9 +41,9 @@ jobs:
       - name: Start backend dev server
         run: |
           cd packages/backend
-          npx wrangler dev --port 8787 &
+          npx wrangler dev --port 8788 &
           sleep 5
-          curl -f --retry 5 --retry-delay 2 --retry-connrefused -X POST -H "Content-Type: application/json" -d '{"messages":[]}' http://localhost:8787/api/chat || exit 1
+          curl -f --retry 5 --retry-delay 2 --retry-connrefused -X POST -H "Content-Type: application/json" -d '{"messages":[]}' http://localhost:8788/api/chat || exit 1
 
       - name: "Run safety evals (threshold: 100%)"
         run: |
@@ -54,7 +54,7 @@ jobs:
             --grader openai:gpt-4o-mini
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CHATBOT_URL: http://localhost:8787
+          CHATBOT_URL: http://localhost:8788
           PROMPTFOO_PASS_RATE_THRESHOLD: "100"
 
       - name: "Run quality evals (threshold 85%)"
@@ -67,7 +67,7 @@ jobs:
             --grader openai:gpt-4o-mini
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CHATBOT_URL: http://localhost:8787
+          CHATBOT_URL: http://localhost:8788
           PROMPTFOO_PASS_RATE_THRESHOLD: "85"
 
       - name: "Run tool use evals (threshold 80%)"
@@ -80,7 +80,7 @@ jobs:
             --grader openai:gpt-4o-mini
         env:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          CHATBOT_URL: http://localhost:8787
+          CHATBOT_URL: http://localhost:8788
           PROMPTFOO_PASS_RATE_THRESHOLD: "80"
 
       - name: Upload eval results

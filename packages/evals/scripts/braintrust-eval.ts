@@ -3,7 +3,7 @@ import { Factuality, AnswerRelevancy } from "autoevals";
 import { readFileSync } from "fs";
 import { parse } from "yaml";
 
-const CHATBOT_URL = process.env.CHATBOT_URL ?? "http://localhost:8787";
+const CHATBOT_URL = process.env.CHATBOT_URL ?? "http://localhost:8788";
 
 interface TestCase {
   description: string;

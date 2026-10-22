@@ -25,7 +25,7 @@ Run Garak with the REST provider:
 
 ```bash
 garak --model-type rest \
-  --model-name http://localhost:8787/api/chat \
+  --model-name http://localhost:8788/api/chat \
   --probes encoding,dan,knownbadsignatures,misleading \
   --generations 5
 ```
@@ -36,7 +36,7 @@ Create `garak-config.yaml` for the chatbot's REST API format:
 
 ```yaml
 rest:
-  uri: http://localhost:8787/api/chat
+  uri: http://localhost:8788/api/chat
   method: POST
   headers:
     Content-Type: application/json
