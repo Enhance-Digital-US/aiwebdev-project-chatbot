@@ -24,7 +24,7 @@ Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course
 
 ## Backend Subsystems (`packages/backend/src/`)
 
-**Single API route**: `POST /api/chat` — accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-4o-mini`.
+**Chat route**: `POST /api/chat` — accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-4o-mini`. The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below).
 
 The system prompt (Team Assistant persona, decoded-content rule, skill catalog) lives in `prompts/system.ts`; bump `SYSTEM_PROMPT_VERSION` when it changes (sent to Langfuse as `prompt_version` metadata).
 
@@ -42,7 +42,7 @@ Current models: `gpt-4o-mini` (OpenAI, routed through Cloudflare AI Gateway via 
 
 Local tool registry. Each file exports a named AI SDK `tool()` with a Zod `inputSchema`.
 
-Current tools: `getWeather` (weather.ts), `convertUnits` (convert-units.ts), `executeCode` (execute-code.ts — environment-aware, uses sandbox bindings).
+Current tools: `getWeather` (weather.ts), `convertUnits` (convert-units.ts), `executeCode` (execute-code.ts — environment-aware, uses sandbox bindings), `fileBugReport` (file-bug-report.ts — starts the bug-report workflow).
 
 Tools are merged into `streamText()` along with MCP tools, the `loadSkill` tool, and `executeCode`. Tools are skipped entirely when `supportsTools === false` on the model config.
 

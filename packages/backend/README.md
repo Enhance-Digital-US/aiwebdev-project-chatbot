@@ -167,6 +167,8 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 | Route | Method | Description |
 |-------|--------|-------------|
 | `POST /api/chat` | POST | Accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream |
+| `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
+| `POST /api/workflows/:id/decision` | POST | `{ decision: "approve" \| "reject", edits? }` for a run waiting for approval (starter only when deployed) |
 
 The `model` field defaults to `gpt-4o-mini`. Available models are registered in `providers.ts`:
 
