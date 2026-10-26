@@ -27,10 +27,7 @@ jobs:
         with:
           repository: Enhance-Digital-US/aiwebdev-project-mcp-server
           ref: ${{ env.ISSUE_TRACKER_REF }}
-          path: issue-tracker
-          # The default token can't read another private repo: add a read-only
-          # fine-grained PAT for that repo as the MCP_SERVER_REPO_TOKEN secret.
-          token: ${{ secrets.MCP_SERVER_REPO_TOKEN || github.token }}
+          path: issue-tracker  # public repo: the default token is enough
 
       - uses: actions/setup-node@v4
         with:

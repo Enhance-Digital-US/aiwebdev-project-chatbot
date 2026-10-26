@@ -9,7 +9,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 2. Lesson 07: AI Gateway
 
-- [ ] 2.1 Create OpenAI models through the AI Gateway base URL from vars and secrets (design §3), keeping Ollama direct; verify a chat request appears in the gateway logs and the registry test still lists both models
+- [x] 2.1 Create OpenAI models through the AI Gateway base URL from vars and secrets (design §3), keeping Ollama direct; verify a chat request appears in the gateway logs and the registry test still lists both models
 
 ## 3. Lesson 09: persona prompt
 
