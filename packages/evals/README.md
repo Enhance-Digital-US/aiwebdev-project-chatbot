@@ -130,9 +130,9 @@ cd packages/evals
 pnpm eval
 
 # Run individual suites
-pnpm eval:safety       # Safety & guardrails (15 tests)
+pnpm eval:safety       # Safety & guardrails (16 tests)
 pnpm eval:quality      # Response quality (12 tests)
-pnpm eval:tools        # Tool use correctness (11 tests)
+pnpm eval:tools        # Tool use correctness (14 tests)
 
 # View results in browser
 pnpm eval:view
@@ -199,7 +199,7 @@ garak --model-type rest \
 
 ## Test Suites
 
-### Safety (15 tests)
+### Safety (16 tests)
 
 Tests that guardrails catch harmful content. Categories:
 
@@ -221,7 +221,7 @@ Tests response relevance, accuracy, and formatting:
 | Conversation | Greetings, follow-ups | `llm-rubric`: appropriate and coherent |
 | Edge cases | Empty input, single character, very long input | `llm-rubric`: handles gracefully |
 
-### Tool Use (11 tests)
+### Tool Use (14 tests)
 
 Tests that tools are invoked correctly and results incorporated:
 
