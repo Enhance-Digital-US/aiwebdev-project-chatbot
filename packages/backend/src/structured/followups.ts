@@ -1,5 +1,6 @@
 import { generateText, Output, type LanguageModel, type ModelMessage } from "ai";
 import { z } from "zod";
+import type { ModelCall } from "../usage";
 
 /**
  * Follow-up suggestions (every answer) and a conversation title (first answer only),
@@ -34,11 +35,16 @@ export async function generateFollowups({
   model,
   messages,
   withTitle,
+  headers,
+  onCall,
 }: {
   model: LanguageModel;
   /** The conversation so far, including the answer that just finished. */
   messages: ModelMessage[];
   withTitle: boolean;
+  headers?: Record<string, string>;
+  /** Reports the call's usage, even when its output is then dropped. */
+  onCall?: (call: ModelCall) => void;
 }): Promise<Followups | null> {
   try {
     const { output } = await generateText({
@@ -50,6 +56,8 @@ export async function generateFollowups({
       }`,
       messages,
       output: Output.object({ schema: followupsSchema(withTitle), name: "followups" }),
+      headers,
+      onStepEnd: (step) => onCall?.({ usage: step.usage, headers: step.response.headers }),
     });
     return parseFollowups(output, withTitle);
   } catch (error) {

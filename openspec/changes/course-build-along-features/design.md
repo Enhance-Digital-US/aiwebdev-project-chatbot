@@ -139,6 +139,13 @@ D1 tables (added to the database lesson 16 introduced for `bug_reports`):
 
 Tokens are encrypted with AES-GCM using a `TOKEN_ENCRYPTION_KEY` secret. The chat route saves the conversation when the stream ends. The sidebar reads `GET /api/chats`.
 
+*As built (8.1–8.3):*
+- **Tables:** `0002_chats.sql` adds `chats` and `messages`. `chat_workflows` was dropped: `bug_reports.chat_id` (lesson 16, indexed) already links each run to its chat. A reopened chat brings its card back from the saved `tool-fileBugReport` part, which holds the instance id. `issue_tracker_tokens` comes with the OAuth slice (8.4).
+- **Ids and ownership:** The chat id is the client's `useChat` id, so `POST /api/chat` first claims it (insert-if-absent, then compare the owner) and refuses a taken id before any tool or model runs. Locally, the owner is the constant `local`. Deployed without an identity, nothing is saved.
+- **No id, no save:** Requests without an id (evals, smoke tests) aren't saved.
+- **Saving:** It happens in the outer `createUIMessageStream`'s `onEnd` (with `originalMessages`), so the saved message carries the follow-ups, the title and the usage metadata under the id the client keeps. `consumeSseStream` keeps the stream running to the end if the client disconnects.
+- **Routes:** Each chat has a URL (`/c/$chatId`), and `/` redirects to a new one. The route loader reads `GET /api/chats/:id`, where 404 means a new chat. `gcTime: 0` stops a chat from reopening with stale cached messages that the next save would write back.
+
 ### 9. Per-user OAuth (lesson 19)
 
 - **CIMD document:** served at `/oauth/client-metadata.json`. An Access application with a bypass policy for that one path keeps it reachable without login; this is configured in the Access dashboard and documented.
@@ -153,6 +160,13 @@ Tokens are encrypted with AES-GCM using a `TOKEN_ENCRYPTION_KEY` secret. The cha
 - **Prices:** live in a `price` field on each model registry entry (USD per 1M input, cached-input and output tokens). A missing price means "unknown".
 - **Token cap:** `chats.token_total` is checked before the model call, and `CHAT_TOKEN_CAP` comes from vars.
 - **Caching:** uses AI Gateway's cache headers on eligible requests. Cached tokens come from the provider's usage report.
+
+*Outcome of building 9.1–9.4:*
+- **Gateway hits:** Measured with two identical streamed requests: the second returned `cf-aig-cache-status: HIT`, with the original usage replayed (`cached_tokens: 0`). So on a gateway hit, the provider's usage report can't show the caching. `usage.ts` reads the header on each step instead: a HIT counts all of its input as cached and costs $0.
+- **Provider prompt caching:** OpenAI's automatic prompt caching (prefixes of 1024+ tokens) is separate. It does come through the usage report (`cacheReadTokens`) and is priced at the cached-input rate.
+- **Eligible requests:** Every call to a gateway-routed model (`gateway: true` in the registry), the follow-ups call included. They are sent with `cf-aig-cache-ttl: 3600`. The cache key is the whole request body, so a hit needs an identical conversation, prompt and tool set, and no other user's tool results can come back.
+- **What usage covers:** Every model call behind a message: each agent step plus the follow-ups call. That's what the gateway logs. A confirmation continuation adds to the paused half's usage.
+- **Token cap:** `chats.token_total` adds each request's input and output tokens. `CHAT_TOKEN_CAP` (200,000) is in `wrangler.jsonc` vars, and the budget is checked before MCP tools load or any model is called. At the cap, the route returns 429 `{ error }`, and the UI shows it.
 
 ## Risks / Trade-offs
 

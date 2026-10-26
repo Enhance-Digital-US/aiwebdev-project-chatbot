@@ -44,18 +44,18 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 8. Lesson 19: persistence and deployed OAuth
 
-- [ ] 8.1 Add the chat tables to the D1 schema (design §8; the binding and apply command exist from 6.2); verify a fresh local database is created by the documented command
-- [ ] 8.2 Save conversations on stream end and load them by id, scoped to the user; add tests for ownership refusal
-- [ ] 8.3 Add the history sidebar and `GET /api/chats`; verify that reload restores a conversation, that the sidebar lists titled chats, and that reopening a chat restores its pending workflow card
-- [ ] 8.4 Serve `/oauth/client-metadata.json`; add `/oauth/connect` and `/oauth/callback` (PKCE) and the encrypted token store (design §8–9); add tests for encryption round-trip and the refresh-on-expiry path
+- [x] 8.1 Add the chat tables to the D1 schema (design §8; the binding and apply command exist from 6.2); verify a fresh local database is created by the documented command
+- [x] 8.2 Save conversations on stream end and load them by id, scoped to the user; add tests for ownership refusal
+- [x] 8.3 Add the history sidebar and `GET /api/chats`; verify that reload restores a conversation, that the sidebar lists titled chats, and that reopening a chat restores its pending workflow card
+- [ ] 8.4 Serve `/oauth/client-metadata.json`; add `/oauth/connect` and `/oauth/callback` (PKCE) and the encrypted token store (design §8–9; its `issue_tracker_tokens` table is a new migration); add tests for encryption round-trip and the refresh-on-expiry path
 - [ ] 8.5 Use the per-user credential source when deployed, and offer "connect issue tracker" when it's missing; route the workflow's `dedupe` and `file` steps through it
 - [ ] 8.6 Configure the Access bypass for the client-metadata path and document it; verify on the deployed app that an unauthenticated `curl` gets the JSON while `/` still requires login
 - [ ] 8.7 Verify deployed end to end: connect as Bob, file a bug from a log, approve, one issue exists on the hosted issue tracker; connect as Carol → `not-permitted`
 
 ## 9. Lesson 20: usage and cost
 
-- [ ] 9.1 Attach `totalUsage` as message metadata, and add `price` to registry entries (design §10); add unit tests for summing steps and for "no price → unknown"
+- [x] 9.1 Attach `totalUsage` as message metadata, and add `price` to registry entries (design §10); add unit tests for summing steps and for "no price → unknown"
 - [ ] 9.2 Add the cost meter in the header; verify it matches gateway-reported tokens for a sample conversation
-- [ ] 9.3 Enforce `CHAT_TOKEN_CAP` using `chats.token_total`; verify that exceeding it makes no model call and shows the budget message
-- [ ] 9.4 Enable gateway caching for eligible requests; verify a repeated request reports cached tokens and a lower estimate
+- [x] 9.3 Enforce `CHAT_TOKEN_CAP` using `chats.token_total`; verify that exceeding it makes no model call and shows the budget message
+- [x] 9.4 Enable gateway caching for eligible requests; verify a repeated request reports cached tokens and a lower estimate
 - [ ] 9.5 Update AGENTS.md, the README and `.dev.vars.example` for everything added in groups 8–9; verify setup from a fresh clone

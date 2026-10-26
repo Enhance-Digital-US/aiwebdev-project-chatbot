@@ -35,36 +35,6 @@ const STEPS = [
 
 const POLL_MS = 2000;
 
-// Pending runs survive a refresh here until chats are persisted (lesson 19).
-const STORAGE_KEY = "team-assistant:bug-reports";
-
-export function rememberBugReport(id: string) {
-  try {
-    const ids = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"));
-    ids.add(id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
-  } catch {
-    // storage unavailable: the card just won't come back after a refresh
-  }
-}
-
-function forgetBugReport(id: string) {
-  try {
-    const ids = (JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as string[]).filter((x) => x !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch {
-    // ignore
-  }
-}
-
-export function rememberedBugReports(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
 function useBugReport(id: string) {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -80,17 +50,11 @@ function useBugReport(id: string) {
         if (stopped) return;
         setStatus(next);
         setError(null);
-        if (next.result || next.status === "errored") {
-          forgetBugReport(id);
-          return;
-        }
+        if (next.result || next.status === "errored") return;
       } catch (e) {
         if (stopped) return;
         setError((e as Error).message);
-        if ((e as Error).message === "Bug report not found") {
-          forgetBugReport(id);
-          return;
-        }
+        if ((e as Error).message === "Bug report not found") return;
       }
       timer = setTimeout(poll, POLL_MS);
     };
@@ -182,7 +146,7 @@ export function BugReportCard({ instanceId }: { instanceId: string }) {
   const waiting = status?.step === "approval" && !status.result;
 
   return (
-    <Card className="my-2 max-w-xl gap-3 py-4" aria-label="Bug report">
+    <Card className="my-2 max-w-xl shrink-0 gap-3 py-4" aria-label="Bug report">
       <CardHeader className="px-4">
         <CardTitle className="flex items-center gap-2 text-sm">
           <BugIcon className="size-4" />

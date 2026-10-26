@@ -166,7 +166,9 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `POST /api/chat` | POST | Accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream |
+| `POST /api/chat` | POST | Accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. With an `id`, the chat is saved under it (the caller's own only; 404 otherwise, 429 at the token cap) |
+| `GET /api/chats` | GET | The caller's titled chats, most recent first (history sidebar) |
+| `GET /api/chats/:id` | GET | One chat with its messages; 404 for a missing chat or another user's |
 | `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
 | `POST /api/workflows/:id/decision` | POST | `{ decision: "approve" \| "reject", edits? }` for a run waiting for approval (starter only when deployed) |
 
@@ -174,8 +176,18 @@ The `model` field defaults to `gpt-4o-mini`. Available models are registered in 
 
 | Model ID | Provider | Notes |
 |----------|----------|-------|
-| `gpt-4o-mini` | OpenAI | Default, supports tools |
-| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running |
+| `gpt-4o-mini` | OpenAI | Default, supports tools; via AI Gateway, priced, cacheable |
+| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running; no price (cost shows as unknown) |
+
+## Saved Chats and Usage
+
+Conversations are saved in D1 (`chats`, `messages`; `migrations/0002_chats.sql`), keyed by the `useChat` id and owned by the Access user (one `local` user in development). The chat route saves when its stream ends, follow-ups and usage included. The frontend gives each chat a URL (`/c/<id>`) and lists titled chats in a sidebar.
+
+Every answer carries its usage as message metadata: input, cached input, output and reasoning tokens, plus an estimated cost. This covers every model call behind the answer (agent steps plus the follow-ups call), so it lines up with the AI Gateway logs. The header shows the conversation's running total.
+
+- **Prices:** come from `price` on each model in `providers.ts` (USD per 1M tokens). A model without one has an unknown cost.
+- **Token cap:** `CHAT_TOKEN_CAP` (`wrangler.jsonc` vars, 200,000) bounds each conversation. At the cap, the route answers 429 before any model call. To try it: `--var CHAT_TOKEN_CAP:3000`.
+- **Caching:** Gateway-routed calls are sent with `cf-aig-cache-ttl: 3600`, so an identical request (same conversation, prompt and tools) is served from AI Gateway's cache. A hit replays the original usage, so `usage.ts` reads the `cf-aig-cache-status: HIT` header: that call counts as all cached input and costs $0. OpenAI's own prompt caching (long shared prefixes) shows up as cached input at the cached rate.
 
 ## MCP — Remote Tool Federation
 
@@ -345,13 +357,13 @@ cd packages/backend
 npx wrangler d1 migrations apply chatbot --local
 ```
 
-This creates the `bug_reports` table that holds each run's progress for the card. Workflows' `status()` only says running or complete. Before deploying, run `npx wrangler d1 create chatbot`, add its `database_id` to `wrangler.jsonc`, and apply the migration with `--remote`.
+This creates the `bug_reports` table that holds each run's progress for the card (Workflows' `status()` only says running or complete), and the saved-chat tables. Before deploying, run `npx wrangler d1 create chatbot`, add its `database_id` to `wrangler.jsonc`, and apply the migrations with `--remote`.
 
 ### Try it
 
 With the issue tracker running on 8787 and `pnpm dev`:
 1. Paste a stack trace and ask *"file this as a bug"*. A card appears and fills in the redacted draft and possible duplicates.
-2. Refresh the page. The card comes back from its instance id.
+2. Refresh the page, or reopen the chat from the sidebar. The saved chat brings the card back, and it still takes a decision.
 3. Click **Approve**. One issue is filed in `proj-demo`.
 
 API:
@@ -473,6 +485,7 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for local guardrails and gemma4 model |
 | `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
 | `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
+| `CHAT_TOKEN_CAP` | No | `wrangler.jsonc` vars (200000) | Token budget per conversation; unset or 0 means no cap |
 
 ## Disabling Prompt/Completion Logging
 

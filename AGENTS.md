@@ -24,15 +24,33 @@ Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course
 
 ## Backend Subsystems (`packages/backend/src/`)
 
-**Chat route**: `POST /api/chat` — accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-4o-mini`. The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below).
+**Chat route**: `POST /api/chat` — accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-4o-mini`. The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below). Saved chats add `GET /api/chats` and `GET /api/chats/:id`.
 
 The system prompt (Team Assistant persona, decoded-content rule, skill catalog) lives in `prompts/system.ts`; bump `SYSTEM_PROMPT_VERSION` when it changes (sent to Langfuse as `prompt_version` metadata).
 
 After the answer streams, the route makes one structured-output call (`structured/followups.ts`, Zod + `Output.object`) and writes a `data-followups` part with three follow-up suggestions, plus a ≤60-char `title` on the first exchange, before finishing the message. Output that fails the schema is dropped silently.
 
+### Saved chats and usage (`chats/store.ts`, `usage.ts`, `routes/chats.ts`)
+
+**Saved chats:**
+- A request with an `id` (the `useChat` id) is saved to D1 (`chats`, `messages`; `migrations/0002_chats.sql`) in the outer `createUIMessageStream`'s `onEnd`, so the saved message includes the follow-ups and metadata. Requests without an id (evals, smoke curls) aren't saved.
+- The id comes from the client, so the route claims it first (`claimChat`: insert-if-absent, then compare the owner) and answers 404 for someone else's chat before any tool or model runs.
+- The owner is the Access user, or `local` in development. Deployed without an identity, nothing is saved.
+
+**Usage:**
+- Each answer gets `metadata.usage`: input, cached input, output and reasoning tokens, and a `cost`. It covers every model call behind the message (agent steps plus follow-ups), so it matches the AI Gateway logs, and a confirmation continuation adds to the paused half.
+- `cost` comes from `price` on the model's registry entry. Without a price it is `null` ("unknown"), never 0.
+
+**Token cap:** `chats.token_total` adds each request's tokens. At `CHAT_TOKEN_CAP` the route answers 429 `{ error }` before any model call.
+
+**Caching:**
+- Gateway-routed models (`gateway: true`) send `cf-aig-cache-ttl`, so identical requests are served from AI Gateway's cache.
+- A gateway hit replays the original usage, so `usage.ts` reads the `cf-aig-cache-status: HIT` header and counts that call as all cached and free.
+- Keep this in mind when re-running evals to measure flakiness: within the TTL, identical requests return the same cached answer.
+
 ### Providers (`providers.ts`)
 
-Model registry keyed by model ID. Each entry defines `createModel`, optional `providerOptions`, `sendReasoning`, `supportsTools`, and `telemetryId`.
+Model registry keyed by model ID. Each entry defines `createModel`, optional `providerOptions`, `sendReasoning`, `supportsTools`, `price` (USD per 1M input/cached-input/output tokens) and `gateway` (routed through AI Gateway, so it can use its cache), and `telemetryId`.
 
 Current models: `gpt-4o-mini` (OpenAI, routed through Cloudflare AI Gateway via `createGatewayOpenAI`), `gemma4:12b` (Ollama with reasoning, called directly).
 
@@ -101,7 +119,7 @@ A Cloudflare Workflow (`BugReportWorkflow`, binding `BUG_REPORT`) turns a pasted
 - `GET /api/workflows/:id` returns that row plus the status.
 - `POST /api/workflows/:id/decision` (`{ decision, edits? }`) is starter-only when deployed and open locally. It checks the run is waiting first, because `sendEvent` doesn't fail on a finished run.
 
-**Local setup:** apply the schema with `npx wrangler d1 migrations apply chatbot --local` (from `packages/backend`). `BUG_REPORT_CHAOS=fail-after-file` (dev only) fails the first filing attempt after the issue exists, to demonstrate idempotent retries.
+**Local setup:** apply the schema (bug reports and saved chats) with `npx wrangler d1 migrations apply chatbot --local` (from `packages/backend`). `BUG_REPORT_CHAOS=fail-after-file` (dev only) fails the first filing attempt after the issue exists, to demonstrate idempotent retries.
 
 ### Guardrails (`guardrails/`)
 
@@ -130,7 +148,11 @@ Login is enforced at the edge by **Cloudflare Zero Trust Access** (Clerk as the 
 
 TanStack Router with routes in `src/routes/`. Chat UI wrappers live in `src/components/ai-elements/`. They keep the old AI SDK Elements export names but are built on shadcn/ui primitives: Trace, Code Block, Message, Bubble, Message Scroller and Dropdown Menu, all in `src/components/ui/`. Add new pieces with `pnpm dlx shadcn@latest add <name>` (style `radix-nova`; see https://ui.shadcn.com/docs/ai-elements), not the deprecated `ai-elements` CLI. `src/app.css` imports `tw-animate-css` and `shadcn/tailwind.css`, which provide the `shimmer`, `data-open` and accordion utilities. `useChat` from `@ai-sdk/react` manages all chat state. No auth code: Cloudflare Access handles sign-in before the SPA loads, and its session cookie rides along on same-origin `/api` calls.
 
-Bug-report runs render as `BugReportCard` (`components/ai-elements/bug-report-card.tsx`), which polls `GET /api/workflows/:id`. Pending run ids are kept in `localStorage`, so a refresh restores their cards (until chats are persisted). Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-title.tsx`).
+Each chat has its own URL, `/c/$chatId` (`/` redirects to a new id). The route loader reads `GET /api/chats/:id`, where 404 means a new chat, and the page is keyed on the id, because `useChat` doesn't reset when its id changes. Loader data isn't cached (`gcTime: 0`), so a chat never reopens with stale messages that the next save would write back.
+
+The root layout holds the history sidebar (`components/chat-history.tsx`, titled chats grouped by day), "New chat", and the header's title and cost meter (`lib/chat-session.tsx`). Errors the backend returns as `{ error }`, such as the token budget, are shown under the conversation.
+
+Bug-report runs render as `BugReportCard` (`components/ai-elements/bug-report-card.tsx`), which polls `GET /api/workflows/:id`. A reopened chat brings the card back from its saved tool part. Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-title.tsx`).
 
 ## Evals (`packages/evals/`)
 
@@ -183,6 +205,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 | `ISSUE_TRACKER_PERSONA` | No | Local issue-tracker persona: `user-alice` (admin), `user-bob` (member, default), `user-carol` (viewer) |
 | `BUG_REPORT_APPROVAL_TIMEOUT` | No | How long a bug report waits for approval (default `24 hours`) |
 | `BUG_REPORT_CHAOS` | No | Dev-only fault injection: `fail-after-file` |
+| `CHAT_TOKEN_CAP` | No | Token budget per conversation, set in `wrangler.jsonc` `vars` (200000); unset or 0 means no cap |
 | `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |
 | `ACCESS_AUD` | No | Cloudflare Access application AUD tag, set in `wrangler.jsonc` `vars`; both needed for Langfuse user ids |
 
