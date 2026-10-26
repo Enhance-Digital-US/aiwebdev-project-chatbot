@@ -40,3 +40,6 @@ Thumbs.db
 
 # Wrangler bulk-secret input files (contain real secret values)
 secrets.json
+
+# Playwright MCP snapshots/console logs
+.playwright-mcp/

@@ -39,6 +39,13 @@ export function createGuardrailMiddleware(
   let previousMessageCount = 0;
   let blockedResult: SafetyResult | null = null;
 
+  function takeRefusal(): string {
+    const categories = blockedResult!.categories;
+    console.warn(`Guardrail blocked input: ${categories.map(categoryLabel).join(", ")}`);
+    blockedResult = null;
+    return buildRefusalMessage(categories);
+  }
+
   return {
     transformParams: async ({ params }) => {
       blockedResult = null;
@@ -65,13 +72,36 @@ export function createGuardrailMiddleware(
       return params;
     },
 
+    // Non-streaming calls (generateText, e.g. follow-up suggestions) get the
+    // same input block; without this, transformParams' verdict was never enforced.
+    wrapGenerate: async ({ doGenerate }) => {
+      if (blockedResult) {
+        const refusal = takeRefusal();
+        return {
+          content: [{ type: "text", text: refusal }],
+          finishReason: { unified: "stop", raw: "guardrail" },
+          usage: {
+            inputTokens: { total: 0, noCache: undefined, cacheRead: undefined, cacheWrite: undefined },
+            outputTokens: { total: 0, text: undefined, reasoning: undefined },
+          },
+          warnings: [],
+        } as unknown as Awaited<ReturnType<typeof doGenerate>>;
+      }
+
+      const result = await doGenerate();
+      return {
+        ...result,
+        content: result.content.map((part) =>
+          part.type === "text" && !regexCheck(part.text).safe
+            ? { ...part, text: " [Content filtered] " }
+            : part,
+        ),
+      };
+    },
+
     wrapStream: async ({ doStream }) => {
       if (blockedResult) {
-        console.warn(
-          `Guardrail blocked input: ${blockedResult.categories.map(categoryLabel).join(", ")}`,
-        );
-        const refusal = buildRefusalMessage(blockedResult.categories);
-        blockedResult = null;
+        const refusal = takeRefusal();
 
         const partId = "guard-refusal";
         const stream = new ReadableStream({

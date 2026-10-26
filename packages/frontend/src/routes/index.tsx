@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport } from "ai";
+import { DefaultChatTransport, type UIMessage } from "ai";
 import {
   Conversation,
   ConversationContent,
@@ -46,7 +46,9 @@ import {
   SandboxTabs,
 } from "@/components/ai-elements/sandbox";
 import { MessageSquareIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Suggestions } from "@/components/ai-elements/suggestions";
+import { useChatTitle } from "@/lib/chat-title";
 import {
   Tool as ToolDisplay,
   ToolContent,
@@ -89,6 +91,17 @@ function ToolInvocation({ part }: { part: ToolPart }) {
   );
 }
 
+/** Sent by the backend after each answer (packages/backend/src/structured/followups.ts). */
+type Followups = { suggestions: string[]; title?: string };
+type ChatMessage = UIMessage<unknown, { followups: Followups }>;
+
+function followupsOf(message: ChatMessage): Followups | undefined {
+  for (const part of message.parts) {
+    if (part.type === "data-followups") return part.data;
+  }
+  return undefined;
+}
+
 // Same-origin request: the Cloudflare Access session cookie goes along
 // automatically, so no auth header is needed.
 const transport = new DefaultChatTransport({ api: "/api/chat" });
@@ -99,13 +112,33 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const [model, setModel] = useState(models[0].id);
-  const { messages, sendMessage, status } = useChat({ transport });
+  const { messages, sendMessage, status } = useChat<ChatMessage>({ transport });
+  const { setTitle } = useChatTitle();
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];
 
-  const handleSubmit = (message: { text: string }) => {
-    sendMessage({ text: message.text }, { body: { model } });
+  const send = (text: string) => {
+    sendMessage({ text }, { body: { model } });
   };
+  const handleSubmit = (message: { text: string }) => send(message.text);
+
+  // The title only arrives with the first answer; later answers never replace it.
+  const title = useMemo(() => {
+    for (const message of messages) {
+      const t = followupsOf(message)?.title;
+      if (t) return t;
+    }
+    return null;
+  }, [messages]);
+  useEffect(() => {
+    setTitle(title);
+    return () => setTitle(null);
+  }, [title, setTitle]);
+
+  // Chips belong to the latest answer only, and hide while a reply is in flight.
+  const last = messages.at(-1);
+  const suggestions =
+    status === "ready" && last?.role === "assistant" ? followupsOf(last)?.suggestions : undefined;
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -116,7 +149,7 @@ function ChatPage() {
             <ConversationEmptyState
               className="flex-1"
               title="What can I help you with?"
-              description="Ask me anything — I can search docs, explain concepts, and help you architect solutions."
+              description="Your team's assistant: search docs, read and file issues, run code, and draft bug reports."
               icon={<MessageSquareIcon className="size-8" />}
             />
           ) : (
@@ -186,6 +219,9 @@ function ChatPage() {
                     })}
                   </MessageContent>
                 </Message>
+                {message === last && suggestions && (
+                  <Suggestions className="mt-2" suggestions={suggestions} onSuggestionClick={send} />
+                )}
               </MessageScrollerItem>
             ))
           )}

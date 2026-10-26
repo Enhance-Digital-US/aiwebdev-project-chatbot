@@ -17,8 +17,8 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 4. Lesson 10: structured output
 
-- [ ] 4.1 Generate suggestions (and the title on the first exchange) after the stream ends, written as a typed data part (design §4); add unit tests for schema acceptance and rejection, and for "malformed output is dropped silently"
-- [ ] 4.2 Render the suggestion chips and the title in the header; verify that clicking a chip sends it, and that a later exchange keeps the first title
+- [x] 4.1 Generate suggestions (and the title on the first exchange) after the stream ends, written as a typed data part (design §4); add unit tests for schema acceptance and rejection, and for "malformed output is dropped silently"
+- [x] 4.2 Render the suggestion chips and the title in the header; verify that clicking a chip sends it, and that a later exchange keeps the first title
 
 ## 5. Lesson 13: issue tracker over MCP
 
