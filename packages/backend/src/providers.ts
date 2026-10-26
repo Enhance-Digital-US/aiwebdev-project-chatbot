@@ -1,4 +1,4 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
 import { createOllama } from "ollama-ai-provider-v2";
 import type { AppEnv } from "./types";
@@ -6,7 +6,7 @@ import type { Price } from "./usage";
 
 export type ModelConfig = {
   createModel: (env: AppEnv["Bindings"]) => LanguageModel;
-  providerOptions?: Record<string, Record<string, unknown>>;
+  providerOptions?: Parameters<typeof streamText>[0]["providerOptions"];
   sendReasoning?: boolean;
   supportsTools?: boolean;
   telemetryId: string;

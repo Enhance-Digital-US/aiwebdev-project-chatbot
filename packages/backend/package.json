@@ -5,12 +5,13 @@
     "dev": "mkdir -p ../frontend/dist && wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp --var APP_URL:http://localhost:5173",
     "build": "wrangler deploy --dry-run --outdir dist",
     "deploy": "wrangler deploy",
-    "test": "vitest run"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@ai-sdk/mcp": "^2.0.80",
-    "@ai-sdk/openai": "^4.0.16",
-    "@ai-sdk/otel": "^1.0.105",
+    "@ai-sdk/mcp": "^2.0.84",
+    "@ai-sdk/openai": "^4.0.102",
+    "@ai-sdk/otel": "^1.0.153",
     "@cloudflare/sandbox": "^0.12.9",
     "@e2b/code-interpreter": "^2.8.0",
     "@opentelemetry/api": "^1.9.1",
@@ -18,10 +19,10 @@
     "@opentelemetry/otlp-transformer": "^0.222.0",
     "@opentelemetry/resources": "^2.11.0",
     "@opentelemetry/sdk-trace-base": "^2.11.0",
-    "ai": "^7.0.32",
+    "ai": "^7.0.153",
     "hono": "^4.12.31",
     "jose": "^6.2.12",
-    "ollama-ai-provider-v2": "^4.0.1",
+    "ollama-ai-provider-v2": "^4.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

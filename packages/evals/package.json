@@ -7,6 +7,7 @@
     "eval:quality": "promptfoo eval --env-file .env --filter-pattern 'quality'",
     "eval:tools": "promptfoo eval --env-file .env --filter-pattern 'tools'",
     "eval:view": "promptfoo view",
+    "typecheck": "tsc --noEmit",
     "eval:braintrust": "npx tsx scripts/braintrust-eval.ts",
     "eval:langfuse": "npx tsx scripts/langfuse-evals.ts"
   },

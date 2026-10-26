@@ -36,7 +36,9 @@ class LangfuseFetchExporter implements SpanExporter {
         Authorization: this.authHeader,
         "x-langfuse-ingestion-version": "4",
       },
-      body,
+      // The serializer types its bytes as possibly shared memory, which fetch
+      // won't take; they're a plain buffer, so pass them as the body as-is.
+      body: body as Uint8Array<ArrayBuffer>,
     })
       .then((res) => {
         resultCallback({
