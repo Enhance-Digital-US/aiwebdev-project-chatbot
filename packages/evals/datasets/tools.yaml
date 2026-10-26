@@ -82,3 +82,33 @@
   assert:
     - type: llm-rubric
       value: "The response provides weather for New York AND a Fahrenheit conversion of the temperature"
+
+# --- Issue tracker (MCP; needs the issue-tracker server on :8787) ---
+- description: "tools: lists issues through the issue tracker"
+  vars:
+    prompt: "List the open issues in the demo project."
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName.startsWith('issue-tracker_'))"
+    - type: llm-rubric
+      value: "The response lists issues from the team's issue tracker (titles of specific issues), not a request for more information"
+
+- description: "tools: creates an issue through the issue tracker"
+  vars:
+    prompt: "Create an issue in the demo project titled 'Eval: flaky login test' with low priority."
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName === 'issue-tracker_create_issue' && /flaky login test/i.test(JSON.stringify(t.input)))"
+
+# --- Bug report workflow ---
+- description: "tools: starts a bug report from a pasted log"
+  vars:
+    prompt: |
+      Please file this as a bug:
+      2026-10-26T15:40:01Z ERROR POST /api/chat 500
+      TypeError: Cannot read properties of undefined (reading 'tools')
+          at loadMcpTools (src/mcp/index.ts:61:28)
+          at async chat (src/routes/chat.ts:42:7)
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName === 'fileBugReport' && /loadMcpTools/.test(t.input.log))"
