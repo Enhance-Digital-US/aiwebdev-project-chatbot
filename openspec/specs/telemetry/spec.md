@@ -46,8 +46,8 @@ Every span SHALL carry `langfuse.session.id` set to the chat ID when one was acc
 - **THEN** their traces share the same `langfuse.session.id`
 
 ### Requirement: Function naming per model
-Each trace SHALL be named by the selected model's telemetry ID: `openai-chat` for `gpt-4o-mini` and `ollama-chat` for `gemma4:12b`.
+Each trace SHALL be named by the selected model's telemetry ID: `openai-chat` for `gpt-6-luna` and `ollama-chat` for `gemma4:12b`.
 
 #### Scenario: OpenAI trace name
-- **WHEN** a request uses `gpt-4o-mini`
+- **WHEN** a request uses `gpt-6-luna`
 - **THEN** the trace's function ID is `openai-chat`

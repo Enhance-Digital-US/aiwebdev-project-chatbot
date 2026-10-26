@@ -88,7 +88,7 @@ Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-trac
 - **Links:** in-app links in answers open in a new tab without Streamdown's external-link prompt (`message.tsx`).
 - **Paths:** the routes sit outside `/api` so the client metadata path can get its own Access bypass.
 
-**MRTR elicitation** (raw loader only): when a server answers `tools/call` with `resultType: "input_required"` + `elicitation/create`, the call pauses for the user through AI SDK tool approval (design §6 of the `course-build-along-features` OpenSpec change):
+**MRTR elicitation** (raw loader only): when a server answers `tools/call` with `resultType: "input_required"` + `elicitation/create`, the call pauses for the user through AI SDK tool approval (design §6 of `openspec/changes/archive/2026-10-26-course-build-along-features`):
 - The probe call happens in the tool's `needsApproval`. A complete result is cached for `execute`. A confirmation is streamed as a `data-mcp-elicitation` part and returns `true`.
 - The UI shows a confirmation card (`components/ai-elements/confirmation.tsx`), and `useChat` resends automatically (`lastAssistantMessageIsCompleteWithApprovalResponses`).
 - Approve: `execute` calls again for a fresh `requestState` and retries with `inputResponses` = accept.
@@ -232,7 +232,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 
 Specs are managed with [OpenSpec](https://github.com/Fission-AI/OpenSpec) (`openspec` CLI, schema `spec-driven`).
 
-- **`openspec/specs/<capability>/spec.md`**: current behavior as requirements and scenarios. Capabilities: `chat-api`, `chat-ui`, `tools`, `mcp-client`, `skills`, `guardrails`, `telemetry`, `auth`, `deployment`, `evals`.
+- **`openspec/specs/<capability>/spec.md`**: current behavior as requirements and scenarios. Capabilities: `chat-api`, `chat-ui`, `chat-persistence`, `usage-and-cost`, `bug-report-workflow`, `tools`, `mcp-client`, `skills`, `guardrails`, `telemetry`, `auth`, `deployment`, `evals`.
 - **`openspec/changes/archive/<date>-<name>/`**: past changes, each with `proposal.md`, `design.md` (architectural rationale and decision logs) and usually `tasks.md`. The pre-OpenSpec design docs and plans from `docs/superpowers/` were moved here. They are historical and may not match current code.
 
 New work goes through an OpenSpec change (`openspec/changes/<name>/` with a proposal, delta specs, design and tasks; `/opsx:propose`), not new files in `docs/superpowers/`. Archive it once it ships, so the main specs stay current. Check with `openspec validate --all --strict`.
