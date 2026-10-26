@@ -53,7 +53,7 @@ curl -X POST http://localhost:8788/api/chat \
 ```
 
 After a successful request, check your [Langfuse dashboard](https://us.cloud.langfuse.com) — you should see a trace with:
-- Model: `gpt-4o-mini`
+- Model: `gpt-6-luna`
 - Non-zero input/output token counts
 - Prompt and completion content
 
@@ -157,7 +157,7 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 2. Open [Langfuse US dashboard](https://us.cloud.langfuse.com)
 3. Navigate to **Traces** — you should see a trace for each request
 4. Click into a trace to verify:
-   - **Model:** `gpt-4o-mini` (or `gemma4:12b` for Ollama route)
+   - **Model:** `gpt-6-luna` (or `gemma4:12b` for Ollama route)
    - **Input tokens:** non-zero count
    - **Output tokens:** non-zero count
    - **Prompt/Completion:** visible (unless disabled via `recordInputs`/`recordOutputs`)
@@ -172,11 +172,11 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 | `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
 | `POST /api/workflows/:id/decision` | POST | `{ decision: "approve" \| "reject", edits? }` for a run waiting for approval (starter only when deployed) |
 
-The `model` field defaults to `gpt-4o-mini`. Available models are registered in `providers.ts`:
+The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models are registered in `providers.ts`:
 
 | Model ID | Provider | Notes |
 |----------|----------|-------|
-| `gpt-4o-mini` | OpenAI | Default, supports tools; via AI Gateway, priced, cacheable |
+| `gpt-6-luna` | OpenAI | Default, supports tools; reasoning model (default effort, reasoning not streamed); via AI Gateway, priced, cacheable |
 | `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running; no price (cost shows as unknown) |
 
 ## Saved Chats and Usage
@@ -493,7 +493,7 @@ By default, prompts and completions are sent to Langfuse. To disable per-call:
 
 ```typescript
 streamText({
-  model: openai("gpt-4o-mini"),
+  model: openai("gpt-6-luna"),
   messages,
   telemetry: {
     functionId: "openai-chat",

@@ -35,12 +35,18 @@ export function createGatewayOpenAI(env: AppEnv["Bindings"]) {
   return createOpenAI(gatewayOpenAIConfig(env));
 }
 
+/** Used when a request names no model, and by the bug-report workflow's draft step. */
+export const DEFAULT_MODEL = "gpt-6-luna";
+
 const models: Record<string, ModelConfig> = {
-  "gpt-4o-mini": {
-    createModel: (env) => createGatewayOpenAI(env)("gpt-4o-mini"),
+  "gpt-6-luna": {
+    // A reasoning model (default effort: medium). Its reasoning isn't streamed
+    // to the UI; reasoning tokens are billed as output and show in the meter.
+    createModel: (env) => createGatewayOpenAI(env)("gpt-6-luna"),
     telemetryId: "openai-chat",
-    // https://developers.openai.com/api/docs/models/gpt-4o-mini
-    price: { input: 0.15, cachedInput: 0.075, output: 0.6 },
+    // https://developers.openai.com/api/docs/models/gpt-6-luna (standard tier,
+    // prompts up to 272K tokens; longer ones cost more and aren't modeled)
+    price: { input: 0.1, cachedInput: 0.01, cacheWrite: 0.125, output: 0.5 },
     gateway: true,
   },
   "gemma4:12b": {

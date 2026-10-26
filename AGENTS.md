@@ -24,7 +24,7 @@ Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course
 
 ## Backend Subsystems (`packages/backend/src/`)
 
-**Chat route**: `POST /api/chat` — accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-4o-mini`. The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below). Saved chats add `GET /api/chats` and `GET /api/chats/:id`.
+**Chat route**: `POST /api/chat` — accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-6-luna` (`DEFAULT_MODEL` in `providers.ts`, also used by the bug-report draft step). The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below). Saved chats add `GET /api/chats` and `GET /api/chats/:id`.
 
 The system prompt (Team Assistant persona, decoded-content rule, skill catalog) lives in `prompts/system.ts`; bump `SYSTEM_PROMPT_VERSION` when it changes (sent to Langfuse as `prompt_version` metadata).
 
@@ -52,7 +52,7 @@ After the answer streams, the route makes one structured-output call (`structure
 
 Model registry keyed by model ID. Each entry defines `createModel`, optional `providerOptions`, `sendReasoning`, `supportsTools`, `price` (USD per 1M input/cached-input/output tokens) and `gateway` (routed through AI Gateway, so it can use its cache), and `telemetryId`.
 
-Current models: `gpt-4o-mini` (OpenAI, routed through Cloudflare AI Gateway via `createGatewayOpenAI`), `gemma4:12b` (Ollama with reasoning, called directly).
+Current models: `gpt-6-luna` (OpenAI reasoning model at the default effort, reasoning not streamed; routed through Cloudflare AI Gateway via `createGatewayOpenAI`), `gemma4:12b` (Ollama with reasoning, called directly).
 
 **To add a model**: add an entry to the `models` record in `providers.ts`.
 

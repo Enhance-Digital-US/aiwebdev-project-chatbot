@@ -2,6 +2,17 @@
 
 ## MODIFIED Requirements
 
+### Requirement: Model picker
+The prompt input SHALL include a model selector. It SHALL always offer GPT-6 Luna (`gpt-6-luna`), the default, and SHALL offer Gemma 4 12B (`gemma4:12b`) only in development builds. The selected model ID SHALL be sent as `model` with each message.
+
+#### Scenario: Production build
+- **WHEN** the app runs from a production build
+- **THEN** only GPT-6 Luna is offered
+
+#### Scenario: Development build
+- **WHEN** the app runs under the Vite dev server
+- **THEN** both GPT-6 Luna and Gemma 4 12B are offered
+
 ### Requirement: Single chat page
 The frontend SHALL serve the chat interface at `/` inside a root layout with a "Team Assistant" header showing the current conversation's title, and SHALL manage all chat state with the AI SDK `useChat` hook posting to `/api/chat`.
 

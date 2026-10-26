@@ -4,10 +4,10 @@ import { addUsage, callUsage, messageUsage, type Price } from "./usage";
 
 const price: Price = { input: 0.15, cachedInput: 0.075, output: 0.6 };
 
-function usage(input: number, output: number, { cached = 0, reasoning = 0 } = {}): LanguageModelUsage {
+function usage(input: number, output: number, { cached = 0, written = 0, reasoning = 0 } = {}): LanguageModelUsage {
   return {
     inputTokens: input,
-    inputTokenDetails: { noCacheTokens: input - cached, cacheReadTokens: cached, cacheWriteTokens: 0 },
+    inputTokenDetails: { noCacheTokens: input - cached - written, cacheReadTokens: cached, cacheWriteTokens: written },
     outputTokens: output,
     outputTokenDetails: { textTokens: output - reasoning, reasoningTokens: reasoning },
     totalTokens: input + output,
@@ -30,6 +30,13 @@ describe("messageUsage", () => {
     const u = callUsage({ usage: usage(2000, 100, { cached: 1024 }) }, price);
     expect(u.cachedInputTokens).toBe(1024);
     expect(u.cost).toBeCloseTo((976 * 0.15 + 1024 * 0.075 + 100 * 0.6) / 1e6, 12);
+  });
+
+  it("prices cache writes at their own rate when the model has one, else as input", () => {
+    const withRate = callUsage({ usage: usage(2000, 0, { written: 1500 }) }, { ...price, cacheWrite: 0.2 });
+    expect(withRate.cost).toBeCloseTo((500 * 0.15 + 1500 * 0.2) / 1e6, 12);
+    const withoutRate = callUsage({ usage: usage(2000, 0, { written: 1500 }) }, price);
+    expect(withoutRate.cost).toBeCloseTo((2000 * 0.15) / 1e6, 12);
   });
 
   it("counts reasoning tokens as output, once", () => {

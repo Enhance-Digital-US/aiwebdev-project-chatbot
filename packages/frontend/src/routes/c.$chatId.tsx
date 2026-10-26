@@ -64,7 +64,7 @@ import {
 } from "@/components/ai-elements/tool";
 
 const models = [
-  { id: "gpt-4o-mini", name: "GPT-4o Mini", provider: "openai" as const },
+  { id: "gpt-6-luna", name: "GPT-6 Luna", provider: "openai" as const },
   // Ollama runs on localhost — only offer it in dev builds
   ...(import.meta.env.DEV
     ? [{ id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const }]

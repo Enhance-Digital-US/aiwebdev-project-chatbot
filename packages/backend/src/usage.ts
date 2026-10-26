@@ -1,7 +1,11 @@
 import type { LanguageModelUsage } from "ai";
 
-/** USD per 1M tokens (design §10). A model without one has an unknown cost. */
-export type Price = { input: number; cachedInput: number; output: number };
+/**
+ * USD per 1M tokens (design §10). A model without one has an unknown cost.
+ * `cacheWrite` is for providers that bill writing to the prompt cache
+ * separately; without it, those tokens cost the normal input rate.
+ */
+export type Price = { input: number; cachedInput: number; cacheWrite?: number; output: number };
 
 /** What one model call reports: its usage, and the response headers (for gateway cache hits). */
 export type ModelCall = { usage: LanguageModelUsage; headers?: Record<string, string> };
@@ -40,11 +44,13 @@ export function callUsage({ usage, headers }: ModelCall, price: Price | undefine
     return { inputTokens, cachedInputTokens: inputTokens, outputTokens, reasoningTokens, cost: 0 };
   }
   const cachedInputTokens = usage.inputTokenDetails?.cacheReadTokens ?? 0;
-  // Cached tokens are part of the input and reasoning tokens part of the
-  // output, so each token is priced exactly once.
+  const cacheWriteTokens = usage.inputTokenDetails?.cacheWriteTokens ?? 0;
+  // Cache reads and writes are part of the input and reasoning tokens part of
+  // the output, so each token is priced exactly once.
   const cost = price
-    ? ((inputTokens - cachedInputTokens) * price.input +
+    ? ((inputTokens - cachedInputTokens - cacheWriteTokens) * price.input +
         cachedInputTokens * price.cachedInput +
+        cacheWriteTokens * (price.cacheWrite ?? price.input) +
         outputTokens * price.output) /
       1_000_000
     : null;

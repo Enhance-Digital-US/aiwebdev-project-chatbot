@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { availableModels, getModel } from "./providers";
+import { availableModels, DEFAULT_MODEL, getModel } from "./providers";
 import type { AppEnv } from "./types";
 
 const env = {
@@ -13,7 +13,8 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("model registry", () => {
   it("lists the OpenAI and Ollama models", () => {
-    expect(availableModels).toEqual(["gpt-4o-mini", "gemma4:12b"]);
+    expect(availableModels).toEqual(["gpt-6-luna", "gemma4:12b"]);
+    expect(getModel(DEFAULT_MODEL)).toBeDefined();
   });
 
   it("rejects unknown and prototype keys", () => {
@@ -25,7 +26,7 @@ describe("model registry", () => {
     const fetchMock = vi.fn(async () => new Response("{}", { status: 500 }));
     vi.stubGlobal("fetch", fetchMock);
 
-    const model = getModel("gpt-4o-mini")!.createModel(env);
+    const model = getModel(DEFAULT_MODEL)!.createModel(env);
     await (model as unknown as { doGenerate: (o: unknown) => Promise<unknown> })
       .doGenerate({ prompt: [{ role: "user", content: [{ type: "text", text: "hi" }] }] })
       .catch(() => {});

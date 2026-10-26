@@ -1,7 +1,7 @@
 import { WorkflowEntrypoint, type WorkflowEvent, type WorkflowStep } from "cloudflare:workers";
 import { NonRetryableError } from "cloudflare:workflows";
 import type { AppEnv } from "../types";
-import { createGatewayOpenAI } from "../providers";
+import { createGatewayOpenAI, DEFAULT_MODEL } from "../providers";
 import { getMcpServers } from "../mcp/config";
 import { withCredentials } from "../mcp";
 import { callMcpTool } from "../mcp/raw-loader";
@@ -98,7 +98,7 @@ export class BugReportWorkflow extends WorkflowEntrypoint<Bindings, BugReportPar
       { retries: { limit: 3, delay: "2 seconds", backoff: "exponential" } },
       async () => {
         await recordProgress(db, id, { step: "draft" });
-        const model = createGatewayOpenAI(this.env)("gpt-4o-mini");
+        const model = createGatewayOpenAI(this.env)(DEFAULT_MODEL);
         const result = await draftBugReport({ model, redactedLog: redacted, note });
         await recordProgress(db, id, { draft: result });
         return result;

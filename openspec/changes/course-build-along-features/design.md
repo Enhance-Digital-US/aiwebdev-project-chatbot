@@ -50,6 +50,11 @@ The backend moves to 8788, and the Vite proxy and the evals provider follow. *Al
 
 OpenAI is created with the gateway's OpenAI-compatible base URL (account id + gateway name from vars, gateway token as a secret). The model registry's shape is unchanged; only `createModel` changes. Ollama stays direct.
 
+**Default model:** `gpt-6-luna` (`DEFAULT_MODEL` in `providers.ts`) replaces `gpt-4o-mini`, which OpenAI lists as deprecated. It's used for chat, for follow-ups (same model), and for the bug-report draft.
+- **Reasoning:** It's a reasoning model, run at the API's default effort (`medium`). Its reasoning isn't streamed to the UI. Reasoning tokens are billed as output and counted in the usage.
+- **Checked live through the gateway:** tool calls, structured follow-ups and titles, a second turn built from saved tool history (no reasoning items replayed), and the workflow's structured draft.
+- **Not changed:** The promptfoo grader stays `gpt-4o-mini`. It's the judge, not the system under test.
+
 ### 4. Suggestions and titles in the same response
 
 The chat route uses `createUIMessageStream`:

@@ -12,7 +12,7 @@ import {
   type UIMessage,
 } from "ai";
 import type { AppEnv } from "../types";
-import { getModel } from "../providers";
+import { DEFAULT_MODEL, getModel } from "../providers";
 import { tools, createExecuteCodeTool, createFileBugReportTool } from "../tools";
 import { loadMcpTools } from "../mcp";
 import type { McpElicitation } from "../mcp/types";
@@ -36,7 +36,7 @@ export const BUDGET_MESSAGE =
 const GATEWAY_CACHE_TTL = "3600";
 
 chat.post("/chat", async (c) => {
-  const { messages, model: modelId = "gpt-4o-mini", id: rawChatId } = (await c.req.json()) as {
+  const { messages, model: modelId = DEFAULT_MODEL, id: rawChatId } = (await c.req.json()) as {
     messages: UIMessage<ChatMetadata>[];
     model?: string;
     id?: unknown;

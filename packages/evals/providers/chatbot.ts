@@ -43,7 +43,7 @@ export default class ChatbotProvider implements ApiProvider {
     this.modelId =
       typeof options === "string"
         ? options
-        : (options?.config?.model as string) ?? "gpt-4o-mini";
+        : (options?.config?.model as string) ?? "gpt-6-luna";
   }
 
   id() {

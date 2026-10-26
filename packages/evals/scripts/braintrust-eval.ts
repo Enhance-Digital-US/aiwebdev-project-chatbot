@@ -30,7 +30,7 @@ async function callChatbot(prompt: string): Promise<string> {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         messages,
-        model: "gpt-4o-mini",
+        model: "gpt-6-luna",
       }),
     });
   } catch (err) {

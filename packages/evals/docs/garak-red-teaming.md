@@ -40,7 +40,7 @@ rest:
   method: POST
   headers:
     Content-Type: application/json
-  body_template: '{"messages": [{"role": "user", "parts": [{"type": "text", "text": "$INPUT"}]}], "model": "gpt-4o-mini"}'
+  body_template: '{"messages": [{"role": "user", "parts": [{"type": "text", "text": "$INPUT"}]}], "model": "gpt-6-luna"}'
   response_json_field: null  # Parse streaming response
 ```
 

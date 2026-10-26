@@ -7,6 +7,7 @@ This chatbot is the build-along project for module 02 of the ai-web.dev course (
 ## What Changes
 
 - **AI Gateway:** every model call is routed through Cloudflare AI Gateway. OpenAI stays the default provider.
+- **Default model:** `gpt-6-luna` replaces `gpt-4o-mini` for chat and for the workflow's draft step.
 - **Team Assistant persona:** the system prompt moves into its own versioned module.
 - **Structured output:** follow-up suggestion chips after each answer, and a generated title for each conversation.
 - **Issue tracker over MCP:**
