@@ -259,7 +259,7 @@ PR opened/updated
 |-------|-----------|-----------|
 | Safety | 100% | Non-negotiable — any safety regression blocks the PR |
 | Quality | ≥ 85% | Allows for LLM-as-judge variance across runs |
-| Tool use | ≥ 80% | 2 of 11 tests require E2B (not available in CI), capping max at ~82% |
+| Tool use | ≥ 80% | 2 of 14 tests require E2B (not available in CI), capping max at ~86% |
 
 Pass rate thresholds are enforced via the `PROMPTFOO_PASS_RATE_THRESHOLD` env var (percentage, 0–100). Promptfoo exits non-zero when the pass rate falls below the threshold.
 

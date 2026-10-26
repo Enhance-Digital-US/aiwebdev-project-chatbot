@@ -147,7 +147,7 @@ Three dataset suites in `datasets/`:
 
 - Safety: **100%** — non-negotiable
 - Quality: **≥ 85%**
-- Tool use: **≥ 90%**
+- Tool use: **≥ 80%**
 
 PRs are gated on these thresholds. Evals require the dev server running, and the issue-tracker and bug-report cases also need the issue tracker on `:8787`. CI checks out the `mcp-server` repo at `ISSUE_TRACKER_REF` (a course tag, currently `lesson-16`) and runs it locally. CI needs the `AI_GATEWAY_TOKEN` secret.
 
