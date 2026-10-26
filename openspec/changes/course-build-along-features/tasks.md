@@ -36,7 +36,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 - [x] 6.3 Add the `fileBugReport` tool, `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` with the starter-only check; add tests for the decision authorization
 - [x] 6.4 Add the workflow card; verify end to end: paste a log, refresh, the card is restored from the instance id, approve, exactly one issue is filed
 - [x] 6.5 Verify the failure paths: a forced retry of `file` files no second issue (needs mcp-server `idempotent-issue-creation`); reject → `rejected`; timeout (shortened in dev) → `expired`; `ISSUE_TRACKER_PERSONA=user-carol` → `not-permitted` after one attempt
-- [ ] 6.6 Document the workflow in AGENTS.md and the README; verify the documented flow works as written
+- [x] 6.6 Document the workflow in AGENTS.md and the README; verify the documented flow works as written
 
 ## 7. Lessons 17–18: guardrails and evals
 
