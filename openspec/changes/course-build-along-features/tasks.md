@@ -40,7 +40,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 7. Lessons 17–18: guardrails and evals
 
-- [ ] 7.1 Add the evals cases: issue-tracker tool use, the bug-report tool call, and redaction (spec `evals`); verify `pnpm eval` meets every threshold
+- [x] 7.1 Add the evals cases: issue-tracker tool use, the bug-report tool call, and redaction (spec `evals`); verify `pnpm eval` meets every threshold
 
 ## 8. Lesson 19: persistence and deployed OAuth
 
