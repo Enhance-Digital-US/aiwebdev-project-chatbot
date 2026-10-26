@@ -183,7 +183,7 @@ The `model` field defaults to `gpt-4o-mini`. Available models are registered in 
 
 Conversations are saved in D1 (`chats`, `messages`; `migrations/0002_chats.sql`), keyed by the `useChat` id and owned by the Access user (one `local` user in development). The chat route saves when its stream ends, follow-ups and usage included. The frontend gives each chat a URL (`/c/<id>`) and lists titled chats in a sidebar.
 
-Every answer carries its usage as message metadata: input, cached input, output and reasoning tokens, plus an estimated cost. This covers every model call behind the answer (agent steps plus the follow-ups call), so it lines up with the AI Gateway logs. The header shows the conversation's running total.
+Every answer carries its usage as message metadata: input, cached input, output and reasoning tokens, plus an estimated cost. This covers every model call behind the answer (agent steps plus the follow-ups call), so it lines up with the chat's calls in the AI Gateway logs. The gateway also logs calls that aren't part of a message: guardrail moderation, and the bug-report workflow's draft call. The header shows the conversation's running total.
 
 - **Prices:** come from `price` on each model in `providers.ts` (USD per 1M tokens). A model without one has an unknown cost.
 - **Token cap:** `CHAT_TOKEN_CAP` (`wrangler.jsonc` vars, 200,000) bounds each conversation. At the cap, the route answers 429 before any model call. To try it: `--var CHAT_TOKEN_CAP:3000`.

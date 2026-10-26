@@ -23,16 +23,18 @@ export async function claimChat(
   db: D1Database,
   id: string,
   owner: string
-): Promise<{ owned: false } | { owned: true; tokenTotal: number }> {
+): Promise<{ owned: false } | { owned: true; tokenTotal: number; titled: boolean }> {
   await db
     .prepare("INSERT OR IGNORE INTO chats (id, user_id, updated_at) VALUES (?, ?, ?)")
     .bind(id, owner, Date.now())
     .run();
   const row = await db
-    .prepare("SELECT user_id, token_total FROM chats WHERE id = ?")
+    .prepare("SELECT user_id, token_total, title FROM chats WHERE id = ?")
     .bind(id)
-    .first<{ user_id: string; token_total: number }>();
-  return row?.user_id === owner ? { owned: true, tokenTotal: row.token_total } : { owned: false };
+    .first<{ user_id: string; token_total: number; title: string | null }>();
+  return row?.user_id === owner
+    ? { owned: true, tokenTotal: row.token_total, titled: row.title !== null }
+    : { owned: false };
 }
 
 /** The chat and its messages, or null when it doesn't exist or isn't the owner's. */

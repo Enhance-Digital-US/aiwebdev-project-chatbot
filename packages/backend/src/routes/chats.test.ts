@@ -20,7 +20,7 @@ vi.mock("../chats/store", async (importOriginal) => {
     claimChat: async (_db: unknown, id: string, owner: string) => {
       if (!table.has(id)) table.set(id, { owner, tokenTotal: 0 });
       const row = table.get(id)!;
-      return row.owner === owner ? { owned: true, tokenTotal: row.tokenTotal } : { owned: false };
+      return row.owner === owner ? { owned: true, tokenTotal: row.tokenTotal, titled: true } : { owned: false };
     },
     loadChat: async (_db: unknown, id: string, owner: string) =>
       table.get(id)?.owner === owner ? { id, title: "Saved", messages: [] } : null,

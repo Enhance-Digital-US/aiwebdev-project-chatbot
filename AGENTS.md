@@ -38,7 +38,7 @@ After the answer streams, the route makes one structured-output call (`structure
 - The owner is the Access user, or `local` in development. Deployed without an identity, nothing is saved.
 
 **Usage:**
-- Each answer gets `metadata.usage`: input, cached input, output and reasoning tokens, and a `cost`. It covers every model call behind the message (agent steps plus follow-ups), so it matches the AI Gateway logs, and a confirmation continuation adds to the paused half.
+- Each answer gets `metadata.usage`: input, cached input, output and reasoning tokens, and a `cost`. It covers every model call behind the message (agent steps plus follow-ups), so it matches the chat's calls in the AI Gateway logs, and a confirmation continuation adds to the paused half. The gateway also logs calls that aren't part of a message: guardrail moderation, and the bug-report workflow's draft call.
 - `cost` comes from `price` on the model's registry entry. Without a price it is `null` ("unknown"), never 0.
 
 **Token cap:** `chats.token_total` adds each request's tokens. At `CHAT_TOKEN_CAP` the route answers 429 `{ error }` before any model call.

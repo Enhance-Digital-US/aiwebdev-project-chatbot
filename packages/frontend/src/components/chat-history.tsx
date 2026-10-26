@@ -36,6 +36,10 @@ export function ChatHistory({ className }: { className?: string }) {
                 <Link
                   to="/c/$chatId"
                   params={{ chatId: chat.id }}
+                  // A hover preload is reused for a while, so a chat could
+                  // reopen without its newest turn (and the next save would
+                  // drop it). Always load fresh on open.
+                  preload={false}
                   className="block truncate rounded-md px-2 py-1.5 hover:bg-accent"
                   activeProps={{ className: "bg-accent font-medium" }}
                   title={chat.title}

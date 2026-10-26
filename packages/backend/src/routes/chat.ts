@@ -20,7 +20,7 @@ import { loadSkill } from "../skills";
 import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
 import { flushTelemetry } from "../telemetry";
 import { createGuardrails } from "../guardrails";
-import { generateFollowups, isFirstExchange } from "../structured/followups";
+import { generateFollowups, wantsTitle } from "../structured/followups";
 import { chatOwner, claimChat, saveChat } from "../chats/store";
 import { addUsage, messageUsage, tokenCount, type MessageUsage, type ModelCall } from "../usage";
 
@@ -52,11 +52,13 @@ chat.post("/chat", async (c) => {
   // tool or model is touched.
   const owner = chatOwner(userId, c.env.ENVIRONMENT === "development");
   const saveTo = chatId && owner ? chatId : undefined;
+  let chatTitled: boolean | undefined;
   if (saveTo) {
     const claim = await claimChat(c.env.DB, saveTo, owner!);
     if (!claim.owned) return c.json({ error: "Chat not found" }, 404);
     const cap = Number(c.env.CHAT_TOKEN_CAP);
     if (cap > 0 && claim.tokenTotal >= cap) return c.json({ error: BUDGET_MESSAGE }, 429);
+    chatTitled = claim.titled;
   }
 
   // Bound once the UI stream exists; MCP tools only ask for confirmation
@@ -190,7 +192,7 @@ chat.post("/chat", async (c) => {
         writer.write({ type: "finish" });
         return;
       }
-      const withTitle = isFirstExchange(messages);
+      const withTitle = wantsTitle(messages, chatTitled);
       const followups = await generateFollowups({
         model: guarded(),
         messages: [...modelMessages, ...answer],
