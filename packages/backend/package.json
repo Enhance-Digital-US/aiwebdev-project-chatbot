@@ -2,7 +2,7 @@
   "name": "backend",
   "private": true,
   "scripts": {
-    "dev": "mkdir -p ../frontend/dist && wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp",
+    "dev": "mkdir -p ../frontend/dist && wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp --var APP_URL:http://localhost:5173",
     "build": "wrangler deploy --dry-run --outdir dist",
     "deploy": "wrangler deploy",
     "test": "vitest run"

@@ -20,11 +20,11 @@ AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a si
 | `pnpm eval:quality` | Quality suite only |
 | `pnpm eval:tools` | Tool use suite only |
 
-Vite proxies `/api` to `localhost:8788` in dev (8787 is left free for the course issue-tracker MCP server). In production the same Worker serves the SPA from static assets (`not_found_handling: single-page-application`) and runs Hono only for `/api/*` (`run_worker_first`) — same origin, so no CORS.
+Vite proxies `/api` and `/oauth` to `localhost:8788` in dev (8787 is left free for the course issue-tracker MCP server). In production the same Worker serves the SPA from static assets (`not_found_handling: single-page-application`) and runs Hono only for `/api/*` and `/oauth/*` (`run_worker_first`) — same origin, so no CORS.
 
 ## Backend Subsystems (`packages/backend/src/`)
 
-**Chat route**: `POST /api/chat` — accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-6-luna` (`DEFAULT_MODEL` in `providers.ts`, also used by the bug-report draft step). The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below). Saved chats add `GET /api/chats` and `GET /api/chats/:id`.
+**Chat route**: `POST /api/chat` — accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. Model defaults to `gpt-6-luna` (`DEFAULT_MODEL` in `providers.ts`, also used by the bug-report draft step). The bug-report workflow adds `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` (see below). Saved chats add `GET /api/chats` and `GET /api/chats/:id`. Connecting the issue tracker adds `/oauth/*` (below).
 
 The system prompt (Team Assistant persona, decoded-content rule, skill catalog) lives in `prompts/system.ts`; bump `SYSTEM_PROMPT_VERSION` when it changes (sent to Langfuse as `prompt_version` metadata).
 
@@ -79,6 +79,15 @@ Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-trac
 
 **Credentials** (`mcp/credentials.ts`): a server entry can have a `credential` source, resolved per request in `loadMcpTools` and merged into its headers. If it returns `null`, the server is skipped. The issue tracker uses the dev-token source: it mints a token from the tracker's development-only `POST /auth/dev-token` for `ISSUE_TRACKER_PERSONA` (`user-alice`/admin, `user-bob`/member (default), `user-carol`/viewer) and caches it until 60 s before expiry. It only runs when `ENVIRONMENT=development`, which `pnpm dev` sets. Don't use the request host to detect local dev: wrangler dev rewrites it to the custom domain.
 
+**Per-user OAuth** (`oauth/`, `routes/oauth.ts`; design §9): when deployed (`ISSUE_TRACKER_AUTH=oauth`, the default outside development), the issue tracker uses the OAuth source instead.
+- **Connecting:** `GET /oauth/connect` runs authorization code + PKCE against the tracker's persona login. Its state is kept in an encrypted, HttpOnly cookie. `GET /oauth/callback` stores the tokens.
+- **Client registration:** CIMD, from `APP_URL/oauth/client-metadata.json`, when that URL is public https. Otherwise (locally) DCR.
+- **Requests:** send `resource` (RFC 8707) = `ISSUE_TRACKER_URL`, or the tracker refuses the token.
+- **Tokens:** stored in D1 (`issue_tracker_tokens`), AES-GCM encrypted with `TOKEN_ENCRYPTION_KEY` and bound to the owner (the same owner as saved chats, `local` in development). Refreshed when expired. A refused refresh first re-reads the row, in case a concurrent request rotated it, then deletes it.
+- **Not connected:** the chat route leaves out `fileBugReport`, and the system prompt tells the model to offer the `/oauth/connect` link.
+- **Links:** in-app links in answers open in a new tab without Streamdown's external-link prompt (`message.tsx`).
+- **Paths:** the routes sit outside `/api` so the client metadata path can get its own Access bypass.
+
 **MRTR elicitation** (raw loader only): when a server answers `tools/call` with `resultType: "input_required"` + `elicitation/create`, the call pauses for the user through AI SDK tool approval (design §6 of the `course-build-along-features` OpenSpec change):
 - The probe call happens in the tool's `needsApproval`. A complete result is cached for `execute`. A confirmation is streamed as a `data-mcp-elicitation` part and returns `true`.
 - The UI shows a confirmation card (`components/ai-elements/confirmation.tsx`), and `useChat` resends automatically (`lastAssistantMessageIsCompleteWithApprovalResponses`).
@@ -119,7 +128,7 @@ A Cloudflare Workflow (`BugReportWorkflow`, binding `BUG_REPORT`) turns a pasted
 - `GET /api/workflows/:id` returns that row plus the status.
 - `POST /api/workflows/:id/decision` (`{ decision, edits? }`) is starter-only when deployed and open locally. It checks the run is waiting first, because `sendEvent` doesn't fail on a finished run.
 
-**Local setup:** apply the schema (bug reports and saved chats) with `npx wrangler d1 migrations apply chatbot --local` (from `packages/backend`). `BUG_REPORT_CHAOS=fail-after-file` (dev only) fails the first filing attempt after the issue exists, to demonstrate idempotent retries.
+**Local setup:** apply the schema (bug reports, saved chats and issue-tracker tokens) with `npx wrangler d1 migrations apply chatbot --local` (from `packages/backend`). `BUG_REPORT_CHAOS=fail-after-file` (dev only) fails the first filing attempt after the issue exists, to demonstrate idempotent retries.
 
 ### Guardrails (`guardrails/`)
 
@@ -152,7 +161,7 @@ Each chat has its own URL, `/c/$chatId` (`/` redirects to a new id). The route l
 
 The root layout holds the history sidebar (`components/chat-history.tsx`, titled chats grouped by day), "New chat", and the header's title and cost meter (`lib/chat-session.tsx`). Errors the backend returns as `{ error }`, such as the token budget, are shown under the conversation.
 
-Bug-report runs render as `BugReportCard` (`components/ai-elements/bug-report-card.tsx`), which polls `GET /api/workflows/:id`. A reopened chat brings the card back from its saved tool part. Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-title.tsx`).
+Bug-report runs render as `BugReportCard` (`components/ai-elements/bug-report-card.tsx`), which polls `GET /api/workflows/:id`. A reopened chat brings the card back from its saved tool part. Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-session.tsx`).
 
 ## Evals (`packages/evals/`)
 
@@ -202,6 +211,9 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
 | `ENVIRONMENT` | No | `"production"` in `wrangler.jsonc`; `pnpm dev` passes `development`, which enables dev-only behavior such as issue-tracker dev tokens |
 | `ISSUE_TRACKER_URL` | No | Issue-tracker MCP endpoint; the hosted tracker in `wrangler.jsonc` `vars`, `http://localhost:8787/mcp` under `pnpm dev` |
+| `ISSUE_TRACKER_AUTH` | No | `oauth` (per-user login; default when deployed) or `dev-token` (default in development) |
+| `TOKEN_ENCRYPTION_KEY` | With OAuth | Secret, 32 random bytes in base64 (`openssl rand -base64 32`); encrypts stored issue-tracker tokens and the login cookie |
+| `APP_URL` | With OAuth | Public origin for the OAuth callback and client metadata URLs; set in `wrangler.jsonc` `vars`, `pnpm dev` passes `http://localhost:5173` |
 | `ISSUE_TRACKER_PERSONA` | No | Local issue-tracker persona: `user-alice` (admin), `user-bob` (member, default), `user-carol` (viewer) |
 | `BUG_REPORT_APPROVAL_TIMEOUT` | No | How long a bug report waits for approval (default `24 hours`) |
 | `BUG_REPORT_CHAOS` | No | Dev-only fault injection: `fail-after-file` |

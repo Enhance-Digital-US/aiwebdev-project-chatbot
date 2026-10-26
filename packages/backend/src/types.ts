@@ -30,7 +30,7 @@ export type AppEnv = {
     OLLAMA_BASE_URL?: string;
     /** Bug-report workflow (workflows/bug-report.ts) */
     BUG_REPORT: Workflow<BugReportParams>;
-    /** D1: bug_reports progress, saved chats (migrations/) */
+    /** D1: bug_reports progress, saved chats, issue-tracker tokens (migrations/) */
     DB: D1Database;
     /** How long a bug report waits for approval (default "24 hours"; shorten in .dev.vars to test expiry) */
     BUG_REPORT_APPROVAL_TIMEOUT?: string;
@@ -44,6 +44,12 @@ export type AppEnv = {
     ISSUE_TRACKER_URL?: string;
     /** Issue-tracker persona for local dev tokens: user-alice (admin), user-bob (member, default), user-carol (viewer) */
     ISSUE_TRACKER_PERSONA?: string;
+    /** Issue-tracker auth: "oauth" (per-user login; default when deployed) or "dev-token" (default locally) */
+    ISSUE_TRACKER_AUTH?: string;
+    /** 32 random bytes, base64: encrypts stored OAuth tokens and the login cookie (secret) */
+    TOKEN_ENCRYPTION_KEY?: string;
+    /** This app's public origin, for OAuth redirect and client metadata URLs (wrangler.jsonc vars; `pnpm dev` passes localhost:5173) */
+    APP_URL?: string;
     /** Cloudflare Access team domain, the Access JWT `iss` (e.g. "https://enhancedigital.cloudflareaccess.com") */
     ACCESS_TEAM_DOMAIN?: string;
     /** Cloudflare Access application AUD tag, the Access JWT `aud` */

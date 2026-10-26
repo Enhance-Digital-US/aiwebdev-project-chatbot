@@ -47,8 +47,8 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 - [x] 8.1 Add the chat tables to the D1 schema (design §8; the binding and apply command exist from 6.2); verify a fresh local database is created by the documented command
 - [x] 8.2 Save conversations on stream end and load them by id, scoped to the user; add tests for ownership refusal
 - [x] 8.3 Add the history sidebar and `GET /api/chats`; verify that reload restores a conversation, that the sidebar lists titled chats, and that reopening a chat restores its pending workflow card
-- [ ] 8.4 Serve `/oauth/client-metadata.json`; add `/oauth/connect` and `/oauth/callback` (PKCE) and the encrypted token store (design §8–9; its `issue_tracker_tokens` table is a new migration); add tests for encryption round-trip and the refresh-on-expiry path
-- [ ] 8.5 Use the per-user credential source when deployed, and offer "connect issue tracker" when it's missing; route the workflow's `dedupe` and `file` steps through it
+- [x] 8.4 Serve `/oauth/client-metadata.json`; add `/oauth/connect` and `/oauth/callback` (PKCE) and the encrypted token store (design §8–9; its `issue_tracker_tokens` table is a new migration); add tests for encryption round-trip and the refresh-on-expiry path
+- [x] 8.5 Use the per-user credential source when deployed, and offer "connect issue tracker" when it's missing; route the workflow's `dedupe` and `file` steps through it
 - [ ] 8.6 Configure the Access bypass for the client-metadata path and document it; verify on the deployed app that an unauthenticated `curl` gets the JSON while `/` still requires login
 - [ ] 8.7 Verify deployed end to end: connect as Bob, file a bug from a log, approve, one issue exists on the hosted issue tracker; connect as Carol → `not-permitted`
 

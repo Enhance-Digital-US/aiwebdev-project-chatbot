@@ -24,6 +24,11 @@ export default defineConfig({
         target: "http://localhost:8788",
         changeOrigin: true,
       },
+      // Connecting the issue tracker (full-page redirects, not fetches)
+      "/oauth": {
+        target: "http://localhost:8788",
+        changeOrigin: true,
+      },
     },
   },
 });

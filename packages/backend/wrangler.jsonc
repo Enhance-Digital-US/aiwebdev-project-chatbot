@@ -29,7 +29,7 @@
     "directory": "../frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/oauth/*"]
   },
 
   "vars": {
@@ -37,6 +37,8 @@
     // issue-tracker dev tokens, keys off this, because wrangler dev rewrites the
     // request host to the custom domain.
     "ENVIRONMENT": "production",
+    // Public origin, for the issue-tracker OAuth redirect and client metadata URLs
+    "APP_URL": "https://chatbot.course-projects.ai-web.dev",
     // The course's hosted issue tracker (an Access bypass covers this host).
     // `pnpm dev` points at the local tracker instead (--var).
     "ISSUE_TRACKER_URL": "https://issue-tracker-mcp-production.enhancedigital.workers.dev/mcp",

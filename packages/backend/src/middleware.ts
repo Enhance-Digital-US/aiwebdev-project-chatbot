@@ -1,4 +1,4 @@
-import type { Hono } from "hono";
+import type { Hono, MiddlewareHandler } from "hono";
 import type { AppEnv } from "./types";
 import { initTelemetry } from "./telemetry";
 import { ACCESS_JWT_HEADER, verifyAccessUser } from "./auth/access";
@@ -14,12 +14,15 @@ export function registerMiddleware(app: Hono<AppEnv>) {
       LANGFUSE_SECRET_KEY: c.env.LANGFUSE_SECRET_KEY,
       LANGFUSE_BASE_URL: c.env.LANGFUSE_BASE_URL,
     });
+    await next();
+  });
 
+  // Login is enforced by Cloudflare Access before the request reaches the
+  // Worker; here we only identify the user (traces, saved chats, issue-tracker
+  // tokens). No header (local dev, evals) → anonymous, with no JWKS fetch.
+  const identify: MiddlewareHandler<AppEnv> = async (c, next) => {
     c.set("userId", null);
 
-    // Login is enforced by Cloudflare Access before the request reaches the
-    // Worker; here we only identify the user for tracing. No header (local dev,
-    // evals) → anonymous, with no JWKS fetch.
     const token = c.req.header(ACCESS_JWT_HEADER);
     if (token && c.env.ACCESS_TEAM_DOMAIN && c.env.ACCESS_AUD) {
       try {
@@ -34,5 +37,8 @@ export function registerMiddleware(app: Hono<AppEnv>) {
     }
 
     await next();
-  });
+  };
+  app.use("/api/*", identify);
+  // Connecting the issue tracker (routes/oauth.ts) is per user too.
+  app.use("/oauth/*", identify);
 }

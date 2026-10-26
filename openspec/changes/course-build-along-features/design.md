@@ -159,6 +159,18 @@ Tokens are encrypted with AES-GCM using a `TOKEN_ENCRYPTION_KEY` secret. The cha
 
 *Alternative:* keep using dev tokens when deployed. Impossible: the endpoint is development-only and fails closed.
 
+*As built (8.4–8.5):*
+- **Mode:** `ISSUE_TRACKER_AUTH` selects the credential source: `oauth` (the default outside development) or `dev-token`. `oauth` also runs locally against the tracker on :8787, owned by `local` like saved chats.
+- **Paths:** the routes live under `/oauth/*`, not `/api`, so the bypass can cover exactly `/oauth/client-metadata.json`. They're added to `run_worker_first` and the Vite proxy.
+- **Origin:** the origin comes from `APP_URL`, not the request: wrangler dev rewrites the host to the custom domain.
+- **Registration:** CIMD is used when the server advertises `client_id_metadata_document_supported` and `APP_URL` is public https. Otherwise DCR, which registers a new public client (`token_endpoint_auth_method: none`) on each connect. A failed CIMD fetch can't be detected from the redirect, so the choice is made up front.
+- **Requests:** every authorize, code-exchange and refresh request carries `resource` = `ISSUE_TRACKER_URL` (RFC 8707); the tracker checks the token's audience. The callback checks `state`, the owner, and `iss` (RFC 9207).
+- **Login state:** PKCE verifier, state, client id and `return_to` live in an AES-GCM sealed cookie (`HttpOnly`, `SameSite=Lax`, `Path=/oauth`, 10 minutes), not in D1.
+- **Tokens:** `issue_tracker_tokens` (`0003`) also stores `client_id`, because a refresh must use the authorized client, and `updated_at`. Each token is encrypted with additional data naming its owner and kind.
+- **Refresh:** within 60 s of expiry. A rotated refresh token is saved. On `invalid_grant` the row is re-read first: a concurrent request (a chat turn and a workflow step) may have rotated it. Otherwise the row is deleted, so the user is offered the link again. Other failures leave the row and skip the server for that request.
+- **Not connected:** the chat route leaves out `fileBugReport` and adds a system-prompt line with the `/oauth/connect?return_to=/c/<id>` link (prompt `team-assistant@4`). In-app links in answers open in a new tab without Streamdown's external-link prompt.
+- **Disconnect:** `POST /oauth/disconnect` deletes the row. There is no UI for it yet.
+
 ### 10. Usage and cost (lesson 20)
 
 - **Usage:** `streamText`'s `totalUsage` is attached as message metadata on finish.

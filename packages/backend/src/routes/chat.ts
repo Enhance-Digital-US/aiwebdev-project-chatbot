@@ -15,6 +15,8 @@ import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
 import { tools, createExecuteCodeTool, createFileBugReportTool } from "../tools";
 import { loadMcpTools } from "../mcp";
+import { issueTrackerAuth } from "../mcp/config";
+import { isConnected } from "../oauth/tokens";
 import type { McpElicitation } from "../mcp/types";
 import { loadSkill } from "../skills";
 import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
@@ -81,6 +83,13 @@ chat.post("/chat", async (c) => {
     }
   }
 
+  // With per-user OAuth, a user who hasn't connected the issue tracker (or
+  // whose refresh token just stopped working) is offered the connect link.
+  const connectUrl =
+    supportsTools && owner && issueTrackerAuth(c.env) === "oauth" && !(await isConnected(c.env.DB, owner))
+      ? `/oauth/connect?return_to=${encodeURIComponent(chatId ? `/c/${chatId}` : "/")}`
+      : undefined;
+
   const baseModel = config.createModel(c.env);
   // Each call gets its own guardrail instance: the middleware tracks which
   // messages it has already checked.
@@ -100,7 +109,7 @@ chat.post("/chat", async (c) => {
 
   const result = streamText({
     model: guarded(),
-    system: buildSystemPrompt(),
+    system: buildSystemPrompt({ issueTrackerConnectUrl: connectUrl }),
     messages: modelMessages,
     providerOptions: config.providerOptions,
     headers,
@@ -110,7 +119,8 @@ chat.post("/chat", async (c) => {
         ...mcpTools,
         loadSkill,
         executeCode: createExecuteCodeTool(c.env),
-        fileBugReport: createFileBugReportTool(c.env, { userId, chatId }),
+        // Its workflow files with the user's issue-tracker credential.
+        ...(!connectUrl && { fileBugReport: createFileBugReportTool(c.env, { userId, chatId }) }),
       },
       stopWhen: isStepCount(5),
     }),

@@ -79,6 +79,8 @@ npx wrangler secret put OPENAI_API_KEY
 npx wrangler secret put AI_GATEWAY_TOKEN
 npx wrangler secret put LANGFUSE_PUBLIC_KEY
 npx wrangler secret put LANGFUSE_SECRET_KEY
+# Encrypts stored issue-tracker tokens; paste the output of `openssl rand -base64 32`:
+npx wrangler secret put TOKEN_ENCRYPTION_KEY
 
 # Required while SANDBOX_PROVIDER="e2b" (otherwise executeCode returns an error):
 npx wrangler secret put E2B_API_KEY
@@ -87,7 +89,7 @@ npx wrangler secret put E2B_API_KEY
 npx wrangler secret put LANGFUSE_BASE_URL   # e.g. https://cloud.langfuse.com
 ```
 
-Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) is set via `vars` in `wrangler.jsonc`. `.dev.vars` is **not** uploaded on deploy.
+Non-secret config (`MCP_IMPL`, `SANDBOX_PROVIDER`, `GUARDRAIL_TIER`, `APP_URL`, `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`) is set via `vars` in `wrangler.jsonc`. `.dev.vars` is **not** uploaded on deploy.
 
 To verify secrets are set:
 
@@ -97,19 +99,19 @@ npx wrangler secret list
 
 ### Step 3: Review `wrangler.jsonc`
 
-The app ships as a **single Worker**: the Vite build in `packages/frontend/dist` is served via [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/), and only `/api/*` invokes the Hono app.
+The app ships as a **single Worker**: the Vite build in `packages/frontend/dist` is served via [Workers Static Assets](https://developers.cloudflare.com/workers/static-assets/), and only `/api/*` and `/oauth/*` invoke the Hono app.
 
 ```jsonc
 "assets": {
   "directory": "../frontend/dist",
   "binding": "ASSETS",
   "not_found_handling": "single-page-application",
-  "run_worker_first": ["/api/*"]
+  "run_worker_first": ["/api/*", "/oauth/*"]
 }
 ```
 
 Key points:
-- **`assets`** — static files are served without invoking the Worker (free, no CPU time). Unknown paths fall back to `index.html` so client-side routes work on refresh. `run_worker_first` sends `/api/*` to Hono even if an asset path matches.
+- **`assets`** — static files are served without invoking the Worker (free, no CPU time). Unknown paths fall back to `index.html` so client-side routes work on refresh. `run_worker_first` sends `/api/*` and `/oauth/*` to Hono instead of the SPA fallback.
 - **Same origin** — frontend and API share a hostname, so no CORS config is needed and the Cloudflare Access session cookie covers both.
 - **`workers_dev: false` / `preview_urls: false`** — the custom domain is the only public origin. Access protects that hostname; a `*.workers.dev` or preview URL would bypass login.
 - **`nodejs_compat`** is required — the OTel packages use Node APIs (`Buffer`, `process.hrtime`) that this flag polyfills in Workers.
@@ -171,6 +173,10 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 | `GET /api/chats/:id` | GET | One chat with its messages; 404 for a missing chat or another user's |
 | `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
 | `POST /api/workflows/:id/decision` | POST | `{ decision: "approve" \| "reject", edits? }` for a run waiting for approval (starter only when deployed) |
+| `GET /oauth/client-metadata.json` | GET | The OAuth Client ID Metadata Document the issue tracker fetches (needs an Access bypass when deployed) |
+| `GET /oauth/connect` | GET | `?return_to=/c/<id>`: starts connecting the issue tracker (authorization code + PKCE), redirecting to its persona login |
+| `GET /oauth/callback` | GET | Finishes the login, stores the encrypted tokens, and returns to `return_to` |
+| `POST /oauth/disconnect` | POST | Deletes the caller's issue-tracker tokens |
 
 The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models are registered in `providers.ts`:
 
@@ -238,13 +244,30 @@ There are no real accounts. Each call carries a development token minted for a *
 | `user-bob` (default) | member | read, create and update issues |
 | `user-carol` | viewer | read only |
 
-To switch persona, set `ISSUE_TRACKER_PERSONA` in `.dev.vars` and restart, or for one session run `npx wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_PERSONA:user-alice`. The tracker's `/auth/dev-token` endpoint exists only in development. When deployed, the source returns nothing and the server is skipped until per-user OAuth is added.
+To switch persona, set `ISSUE_TRACKER_PERSONA` in `.dev.vars` and restart, or for one session run `npx wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_PERSONA:user-alice`. The tracker's `/auth/dev-token` endpoint exists only in development, so deployed users connect with OAuth instead (below).
 
 **Confirmations (MRTR elicitation).** Some tools ask before acting. As Alice, *"delete the project <id>"* shows a confirmation card with the tracker's message:
 - **Approve** retries the call with the answer, and the project is deleted.
 - **Cancel** leaves the project, and the model is told it was cancelled.
 
 Only the raw client (`MCP_IMPL=raw`) supports this. To restore the demo data afterwards, run `pnpm db:reset:local` in `mcp-server`.
+
+### Connecting the Issue Tracker (per-user OAuth)
+
+When deployed, there are no dev tokens: each user connects the tracker by signing in as a persona (`ISSUE_TRACKER_AUTH=oauth`, the default outside development).
+
+- **Not connected:** the issue-tracker tools and `fileBugReport` are left out, and the assistant answers with a **Connect issue tracker** link (`/oauth/connect?return_to=/c/<id>`). It opens the tracker's persona login in a new tab, which returns to the chat.
+- **Client registration:** the tracker identifies the chatbot by its Client ID Metadata Document (CIMD) at `APP_URL/oauth/client-metadata.json`. CIMD needs a public https URL the tracker can fetch, so locally the chatbot falls back to dynamic client registration (DCR), and the login page shows the name as unverified. Deployed, Access must let that one path through without login, or the tracker gets the Access login page instead.
+- **Tokens:** the access and refresh tokens are AES-GCM encrypted with `TOKEN_ENCRYPTION_KEY`, bound to the user, stored in D1 (`issue_tracker_tokens`, `migrations/0003_issue_tracker_tokens.sql`), and never sent to the browser. An access token lasts an hour and is refreshed when it expires. When the refresh token stops working (after 7 days, or a persona password change), the row is deleted and the user is offered the link again. The bug-report workflow's `dedupe` and `file` steps use the same tokens.
+
+**Try it locally.** You need `TOKEN_ENCRYPTION_KEY` in `.dev.vars`, the tracker's persona passwords in *its* `.dev.vars` (restart it after adding them), and then:
+
+```bash
+npx wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp \
+  --var APP_URL:http://localhost:5173 --var ISSUE_TRACKER_AUTH:oauth
+```
+
+Run the frontend with `pnpm --filter frontend dev`. Ask about issues, follow the link, and sign in as Bob. Carol (viewer) can search, but her bug reports end `not-permitted`.
 
 ### Adding an MCP Server
 
@@ -486,6 +509,9 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 | `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
 | `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
 | `CHAT_TOKEN_CAP` | No | `wrangler.jsonc` vars (200000) | Token budget per conversation; unset or 0 means no cap |
+| `ISSUE_TRACKER_AUTH` | No | `oauth`; `dev-token` in development | How issue-tracker calls authenticate |
+| `TOKEN_ENCRYPTION_KEY` | With OAuth | — | 32 random bytes, base64 (`openssl rand -base64 32`); encrypts stored issue-tracker tokens. A secret |
+| `APP_URL` | With OAuth | `wrangler.jsonc` vars; `pnpm dev` passes `http://localhost:5173` | Public origin for the OAuth callback and client metadata URLs |
 
 ## Disabling Prompt/Completion Logging
 
