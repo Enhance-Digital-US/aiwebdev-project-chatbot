@@ -13,9 +13,42 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    env:
+      # Course checkpoint of the issue-tracker MCP server the evals run against
+      # (lesson-16: idempotent create_issue). Bump with the lesson this branch targets.
+      ISSUE_TRACKER_REF: lesson-16
+
     steps:
       - uses: actions/checkout@v4
 
+      # --- Issue tracker on :8787 (the issue-tracker and bug-report evals need it) ---
+      - name: Check out the issue-tracker MCP server
+        uses: actions/checkout@v4
+        with:
+          repository: Enhance-Digital-US/aiwebdev-project-mcp-server
+          ref: ${{ env.ISSUE_TRACKER_REF }}
+          path: issue-tracker
+          # The default token can't read another private repo: add a read-only
+          # fine-grained PAT for that repo as the MCP_SERVER_REPO_TOKEN secret.
+          token: ${{ secrets.MCP_SERVER_REPO_TOKEN || github.token }}
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24  # the tracker's documented runtime
+
+      - name: Start the issue tracker
+        working-directory: issue-tracker
+        run: |
+          cp .dev.vars.example .dev.vars
+          # Its lockfile is pnpm 10's; this repo pins pnpm 12.
+          npx -y pnpm@10 install --frozen-lockfile
+          npx -y pnpm@10 db:migrate:local
+          npx -y pnpm@10 db:reset:local
+          npx wrangler dev --port 8787 > ../issue-tracker.log 2>&1 &
+          curl -sf --retry 15 --retry-delay 2 --retry-connrefused -X POST -H "Content-Type: application/json" \
+            -d '{"sub":"user-bob","scope":"member"}' http://localhost:8787/auth/dev-token > /dev/null
+
+      # --- Chatbot ---
       - uses: pnpm/action-setup@v4  # version from root package.json "packageManager"
 
       - uses: actions/setup-node@v4
@@ -97,3 +130,4 @@ jobs:
           name: eval-results
           path: |
             packages/evals/results-*.json
+            issue-tracker.log

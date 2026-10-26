@@ -149,7 +149,7 @@ Three dataset suites in `datasets/`:
 - Quality: **≥ 85%**
 - Tool use: **≥ 90%**
 
-PRs are gated on these thresholds. Evals require the dev server running.
+PRs are gated on these thresholds. Evals require the dev server running, and the issue-tracker and bug-report cases also need the issue tracker on `:8787`. CI checks out the `mcp-server` repo at `ISSUE_TRACKER_REF` (a course tag, currently `lesson-16`) and runs it locally. That needs the `MCP_SERVER_REPO_TOKEN` secret (a read-only token for that repo) and `AI_GATEWAY_TOKEN`.
 
 ### Extensions
 
