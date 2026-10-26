@@ -13,6 +13,10 @@ The backend SHALL read MCP servers from a static list in code, each with a name,
 - **WHEN** the backend runs in local development
 - **THEN** the `issue-tracker` entry points at `http://localhost:8787/mcp`
 
+#### Scenario: Issue tracker when deployed
+- **WHEN** the backend runs in production
+- **THEN** the `issue-tracker` entry points at the hosted tracker, `https://issue-tracker-mcp-production.enhancedigital.workers.dev/mcp`, set per environment as `ISSUE_TRACKER_URL`
+
 ## ADDED Requirements
 
 ### Requirement: Issue tracker credentials in development

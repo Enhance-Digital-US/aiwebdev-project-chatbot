@@ -57,7 +57,7 @@ Connects to external MCP servers and exposes their tools alongside local tools. 
 
 Selected via `MCP_IMPL` env var (default: `"raw"`). Server list is static in `mcp/config.ts`. Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions.
 
-Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-tracker` (the course's issue-tracker MCP server, run locally from the `mcp-server` repo on `localhost:8787`).
+Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-tracker` (the course's issue-tracker MCP server). Its URL is `ISSUE_TRACKER_URL`: the hosted production tracker in `wrangler.jsonc` vars, and `localhost:8787` (the `mcp-server` repo's `pnpm dev`) under `pnpm dev`.
 
 **Credentials** (`mcp/credentials.ts`): a server entry can have a `credential` source, resolved per request in `loadMcpTools` and merged into its headers. If it returns `null`, the server is skipped. The issue tracker uses the dev-token source: it mints a token from the tracker's development-only `POST /auth/dev-token` for `ISSUE_TRACKER_PERSONA` (`user-alice`/admin, `user-bob`/member (default), `user-carol`/viewer) and caches it until 60 s before expiry. It only runs when `ENVIRONMENT=development`, which `pnpm dev` sets. Don't use the request host to detect local dev: wrangler dev rewrites it to the custom domain.
 
@@ -156,6 +156,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 | `PROMPTFOO_GRADER_MODEL` | No | LLM-as-judge model (default: `openai:gpt-4o-mini`) |
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
 | `ENVIRONMENT` | No | `"production"` in `wrangler.jsonc`; `pnpm dev` passes `development`, which enables dev-only behavior such as issue-tracker dev tokens |
+| `ISSUE_TRACKER_URL` | No | Issue-tracker MCP endpoint; the hosted tracker in `wrangler.jsonc` `vars`, `http://localhost:8787/mcp` under `pnpm dev` |
 | `ISSUE_TRACKER_PERSONA` | No | Local issue-tracker persona: `user-alice` (admin), `user-bob` (member, default), `user-carol` (viewer) |
 | `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |
 | `ACCESS_AUD` | No | Cloudflare Access application AUD tag, set in `wrangler.jsonc` `vars`; both needed for Langfuse user ids |

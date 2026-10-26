@@ -29,6 +29,8 @@ export type AppEnv = {
     OLLAMA_BASE_URL?: string;
     /** CF Workers AI binding — required for cloud guardrail tier */
     AI: Ai;
+    /** Issue-tracker MCP endpoint: the hosted tracker in wrangler.jsonc vars; `pnpm dev` passes localhost:8787 */
+    ISSUE_TRACKER_URL?: string;
     /** Issue-tracker persona for local dev tokens: user-alice (admin), user-bob (member, default), user-carol (viewer) */
     ISSUE_TRACKER_PERSONA?: string;
     /** Cloudflare Access team domain, the Access JWT `iss` (e.g. "https://enhancedigital.cloudflareaccess.com") */

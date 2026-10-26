@@ -2,7 +2,7 @@ import type { ToolSet } from "ai";
 import type { AppEnv } from "../types";
 import type { McpConnection, McpHooks, McpServerConfig, McpToolLoader } from "./types";
 import type { CredentialContext } from "./credentials";
-import { mcpServers } from "./config";
+import { getMcpServers } from "./config";
 import { aiSdkLoader } from "./ai-sdk-loader";
 import { rawLoader } from "./raw-loader";
 
@@ -43,7 +43,7 @@ export async function loadMcpTools(
 ): Promise<{ tools: ToolSet; close: () => Promise<void> }> {
   const loader: McpToolLoader =
     env.MCP_IMPL === "ai-sdk" ? aiSdkLoader : rawLoader;
-  const enabled = mcpServers.filter((server) => server.enabled);
+  const enabled = getMcpServers(env).filter((server) => server.enabled);
 
   const results = await Promise.allSettled(
     enabled.map((server) =>

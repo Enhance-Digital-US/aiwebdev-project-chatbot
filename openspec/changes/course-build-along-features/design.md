@@ -34,10 +34,10 @@ See proposal.md for motivation. Constraints:
 | 09 Prompt Engineering | `prompts/system.ts`, the Team Assistant persona |
 | 10 Structured Data | suggestions and titles (title shown in the header, in memory) |
 | 13 MCP | `issue-tracker` server entry, dev-token credentials, MRTR elicitation and confirmation card |
-| 16 Durable Workflows | bug-report workflow, status and decision routes, workflow card |
+| 16 Durable Workflows | bug-report workflow, its D1 progress record (the D1 binding arrives here), status and decision routes, workflow card |
 | 17 Guardrails | (existing guardrails) plus a redaction check in the safety suite's fixtures |
 | 18 Evals | new eval cases |
-| 19 Infra & Security | D1 persistence and sidebar, per-user OAuth to the issue tracker, the Access bypass for client metadata, the token store |
+| 19 Infra & Security | D1 chat persistence (new tables in the existing database) and sidebar, per-user OAuth to the issue tracker, the Access bypass for client metadata, the token store |
 | 20 Cost and Budget | usage metadata, price table, cost meter, per-chat cap (in D1), gateway caching |
 
 Port 8788 and `.dev.vars.example` belong to the scaffold (lesson 03), so they're present from the first checkpoint.
@@ -113,9 +113,25 @@ POST /api/workflows/:id/decision  → instance.sendEvent({ type: "bug-approval",
 
 *Alternatives:* a screenshot as input (rejected: text-only course); a research report (rejected: it has no human step to teach `waitForEvent`).
 
+**Spike outcome (task 6.1, wrangler 4.112 `wrangler dev`, two-step workflow + `waitForEvent`):**
+- `create({ params })`, `get(id)`, `sendEvent({ type, payload })` and `status()` work locally as documented.
+- **`status()` is coarse:** `{ status, output, error }` only. There is no current step, and step outputs (the draft, the duplicates) aren't visible until the run completes. Locally, a run waiting on an event reports `running`, not `waiting`. The dev-only `__LOCAL_DEV_STEP_OUTPUTS` field mustn't be relied on.
+- **`instance.subscribe()`** (step events with outputs) isn't available in this wrangler version or in the installed `workers-types`.
+- **The card's progress therefore needs its own record**, written by the workflow at each step and read by `GET /api/workflows/:id` (see the open question below).
+- **`sendEvent` after completion doesn't throw locally**, although the docs say it should. The decision route must check the instance is waiting for approval before sending.
+- **`waitForEvent` timeout** throws inside `run` ("Execution timed out after …"). Catching it and returning `{ outcome: "expired" }` ends the instance `complete`.
+- **`NonRetryableError`** runs the step exactly once. Left uncaught, it ends the instance `errored` with a generic `WorkflowFatalError` that loses the reason. So the `file` step's role refusal is caught in `run` and returned as `{ outcome: "not-permitted" }`. Outcomes (`filed`, `rejected`, `expired`, `not-permitted`) are the run's `output`. `errored` means an unexpected failure.
+
+**Decision: progress lives in D1, from lesson 16.** D1 is strongly consistent, so the card never shows a stale step. KV was rejected because it's eventually consistent: the step could lag up to about 60 s when deployed. A Durable Object per run was rejected as a second new concept for this lesson.
+- **Table:** `bug_reports (instance_id PK, user_id, chat_id, step, draft JSON, dupes JSON, result JSON, updated_at)`.
+- **Writes:** the workflow writes to it inside each step's callback, so a retried step simply rewrites the same row. It also writes `step = 'approval'` in a small step just before `waitForEvent`.
+- **Reads:** `GET /api/workflows/:id` reads this row together with `instance.status()`.
+- **Ownership:** the starter check uses `bug_reports.user_id` (also kept in the params).
+- **Later:** lesson 19 adds its chat tables to the same database, and `chat_workflows` can join to `bug_reports`.
+
 ### 8. Persistence (lesson 19)
 
-D1 tables:
+D1 tables (added to the database lesson 16 introduced for `bug_reports`):
 - `chats` (id, user_id, title, token_total, updated_at)
 - `messages` (chat_id, seq, ui_message JSON)
 - `chat_workflows` (chat_id, instance_id)

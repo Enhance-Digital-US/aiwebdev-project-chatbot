@@ -31,8 +31,8 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 6. Lesson 16: bug-report workflow
 
-- [ ] 6.1 Spike Workflows create / waitForEvent / sendEvent / status with a two-step workflow in `wrangler dev`; record any API differences in design §7
-- [ ] 6.2 Add the Workflow binding and `BugReportWorkflow` with redact, draft, dedupe, approval and file (design §7); add unit tests for redaction (keys, bearer tokens, emails, IPs) and the `BugDraft` schema
+- [x] 6.1 Spike Workflows create / waitForEvent / sendEvent / status with a two-step workflow in `wrangler dev`; record any API differences in design §7
+- [ ] 6.2 Add the Workflow and D1 bindings, the `bug_reports` progress table, and `BugReportWorkflow` with redact, draft, dedupe, approval and file (design §7); add unit tests for redaction (keys, bearer tokens, emails, IPs) and the `BugDraft` schema
 - [ ] 6.3 Add the `fileBugReport` tool, `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` with the starter-only check; add tests for the decision authorization
 - [ ] 6.4 Add the workflow card; verify end to end: paste a log, refresh, the card is restored from the instance id, approve, exactly one issue is filed
 - [ ] 6.5 Verify the failure paths: a forced retry of `file` files no second issue (needs mcp-server `idempotent-issue-creation`); reject → `rejected`; timeout (shortened in dev) → `expired`; `ISSUE_TRACKER_PERSONA=user-carol` → `not-permitted` after one attempt
@@ -44,7 +44,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 
 ## 8. Lesson 19: persistence and deployed OAuth
 
-- [ ] 8.1 Add the D1 binding, the schema (design §8) and the documented apply command; verify a fresh local database is created by the documented command
+- [ ] 8.1 Add the chat tables to the D1 schema (design §8; the binding and apply command exist from 6.2); verify a fresh local database is created by the documented command
 - [ ] 8.2 Save conversations on stream end and load them by id, scoped to the user; add tests for ownership refusal
 - [ ] 8.3 Add the history sidebar and `GET /api/chats`; verify that reload restores a conversation, that the sidebar lists titled chats, and that reopening a chat restores its pending workflow card
 - [ ] 8.4 Serve `/oauth/client-metadata.json`; add `/oauth/connect` and `/oauth/callback` (PKCE) and the encrypted token store (design §8–9); add tests for encryption round-trip and the refresh-on-expiry path

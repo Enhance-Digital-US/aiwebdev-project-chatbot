@@ -198,7 +198,7 @@ Defined in `mcp/config.ts`:
 |--------|-----|---------|
 | `cf-docs` | `https://docs.mcp.cloudflare.com/mcp` | Cloudflare documentation search |
 | `deepwiki` | `https://mcp.deepwiki.com/mcp` | Open-source project knowledge base |
-| `issue-tracker` | `http://localhost:8787/mcp` | The course's issue tracker (projects, issues), local dev only |
+| `issue-tracker` | `ISSUE_TRACKER_URL` (`http://localhost:8787/mcp` under `pnpm dev`) | The course's issue tracker (projects, issues) |
 
 Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions with local tools.
 
@@ -213,7 +213,7 @@ Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions
 The `issue-tracker` server is the course's own MCP server (the `mcp-server` repo). It must run on port **8787**, because it rejects any other Host. That's why this backend runs on 8788.
 
 1. In the `mcp-server` repo, follow its README to set up the local database, then run `pnpm dev`.
-2. Here, run `pnpm dev` from the root. Its `--var ENVIRONMENT:development` turns on dev tokens.
+2. Here, run `pnpm dev` from the root. It passes `--var ENVIRONMENT:development` (turns on dev tokens) and `--var ISSUE_TRACKER_URL:http://localhost:8787/mcp`.
 3. Ask the chat to *"list the open issues in the demo project"*. It calls `issue-tracker_search_issues` on `proj-demo`.
 
 There are no real accounts. Each call carries a development token minted for a **persona**:

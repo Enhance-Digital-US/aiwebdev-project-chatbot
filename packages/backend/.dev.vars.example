@@ -22,9 +22,10 @@ LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
 
 # --- Optional ---------------------------------------------------------------
 
-# `pnpm dev` already passes --var ENVIRONMENT:development. Set it here too if
-# you run `wrangler dev` directly (e.g. in CI).
+# `pnpm dev` already passes these two with --var. Set them here too if you run
+# `wrangler dev` directly (e.g. in CI).
 ENVIRONMENT=development
+ISSUE_TRACKER_URL=http://localhost:8787/mcp
 
 # Issue-tracker persona for local dev tokens (the tracker runs on :8787):
 # user-alice (admin), user-bob (member, default), user-carol (viewer)
