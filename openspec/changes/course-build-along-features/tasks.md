@@ -27,7 +27,7 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 - [x] 5.3 Add the `issue-tracker` entry to the server list; verify "list open issues in the demo project" calls an `issue-tracker_*` tool and returns the seeded issues
 - [x] 5.4 Return elicitations as `input-required` tool results and retry with `inputResponses` (design §6); add unit tests for the confirm, cancel and unsupported-input paths
 - [x] 5.5 Add the confirmation card; verify `delete_project` through the chat asks first, that cancel leaves the project, and that approve deletes it (then reset the demo data)
-- [ ] 5.6 Update the `mcp-client` section of AGENTS.md and the backend README (issue tracker, personas, `ISSUE_TRACKER_PERSONA`); verify the documented steps work from a fresh clone
+- [x] 5.6 Update the `mcp-client` section of AGENTS.md and the backend README (issue tracker, personas, `ISSUE_TRACKER_PERSONA`); verify the documented steps work from a fresh clone
 
 ## 6. Lesson 16: bug-report workflow
 
