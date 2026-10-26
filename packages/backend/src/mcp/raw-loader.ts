@@ -1,4 +1,4 @@
-import { jsonSchema, tool, type ToolSet } from "ai";
+import { jsonSchema, tool, type ModelMessage, type ToolSet } from "ai";
 import type { McpServerConfig, McpToolLoader } from "./types";
 
 /**
@@ -15,7 +15,8 @@ const CLIENT_INFO = { name: "chatbot-backend", version: "0.1.0" };
 const REQUEST_META = {
   "io.modelcontextprotocol/protocolVersion": MODERN_VERSION,
   "io.modelcontextprotocol/clientInfo": CLIENT_INFO,
-  "io.modelcontextprotocol/clientCapabilities": {},
+  // We answer elicitations (confirmations) through the chat UI; see callTool.
+  "io.modelcontextprotocol/clientCapabilities": { elicitation: {} },
 };
 
 type Era = "modern" | "legacy";
@@ -49,6 +50,89 @@ interface McpToolDefinition {
 interface McpContentBlock {
   type: string;
   text?: string;
+}
+
+/** One `elicitation/create` input request from an MRTR `input_required` result. */
+interface ElicitationRequest {
+  method: "elicitation/create";
+  params: {
+    message: string;
+    requestedSchema?: { properties?: Record<string, { type?: string }> };
+  };
+}
+
+/** What the client answers for one input request. */
+interface ElicitationResponse {
+  action: "accept" | "decline";
+  content?: Record<string, unknown>;
+}
+
+type CallResult =
+  | { kind: "complete"; content: McpContentBlock[] }
+  | { kind: "input-required"; requests: Record<string, ElicitationRequest>; requestState?: string };
+
+/**
+ * Checks an `input_required` result asks only for what this client can answer:
+ * confirmations, i.e. elicitations whose form is empty or all booleans.
+ */
+function supportedInputRequests(
+  serverName: string,
+  toolName: string,
+  inputRequests: unknown
+): Record<string, ElicitationRequest> {
+  const entries = Object.entries((inputRequests ?? {}) as Record<string, { method?: string; params?: unknown }>);
+  if (entries.length === 0) {
+    throw new Error(`${serverName}: tool "${toolName}" needs client input but sent no input requests`);
+  }
+  for (const [key, request] of entries) {
+    if (request.method !== "elicitation/create") {
+      throw new Error(
+        `${serverName}: tool "${toolName}" needs client input this client does not support: ${request.method} (request "${key}")`
+      );
+    }
+    const properties = (request as ElicitationRequest).params?.requestedSchema?.properties ?? {};
+    const nonBoolean = Object.entries(properties).filter(([, prop]) => prop.type !== "boolean");
+    if (nonBoolean.length > 0) {
+      throw new Error(
+        `${serverName}: tool "${toolName}" asks for a form this client does not support (fields: ${nonBoolean.map(([name]) => name).join(", ")})`
+      );
+    }
+  }
+  return Object.fromEntries(entries) as Record<string, ElicitationRequest>;
+}
+
+/** The user approved: accept every request, answering each boolean field "yes". */
+function acceptAll(requests: Record<string, ElicitationRequest>): Record<string, ElicitationResponse> {
+  return Object.fromEntries(
+    Object.entries(requests).map(([key, request]) => [
+      key,
+      {
+        action: "accept",
+        content: Object.fromEntries(
+          Object.keys(request.params.requestedSchema?.properties ?? {}).map((field) => [field, true])
+        ),
+      },
+    ])
+  );
+}
+
+/**
+ * Finds the user's answer to the approval request for this tool call, if the
+ * conversation already contains one (the request after the user decided).
+ */
+export function approvalFor(messages: ModelMessage[], toolCallId: string): boolean | undefined {
+  let approvalId: string | undefined;
+  for (const message of messages) {
+    if (typeof message.content === "string") continue;
+    for (const part of message.content) {
+      if (part.type === "tool-approval-request" && part.toolCallId === toolCallId) {
+        approvalId = part.approvalId;
+      } else if (part.type === "tool-approval-response" && approvalId && part.approvalId === approvalId) {
+        return part.approved;
+      }
+    }
+  }
+  return undefined;
 }
 
 /** A tool parameter the server wants mirrored into an `Mcp-Param-*` header. */
@@ -276,15 +360,10 @@ class RawMcpClient {
         `${this.server.name}: ${method} → JSON-RPC error ${message.error.code}: ${message.error.message}`
       );
     }
-    const result = message.result ?? {};
-    // Missing resultType means "complete" (pre-2026 servers). We declare no
-    // client capabilities, so we can't answer a multi-round-trip input request.
-    if (result.resultType === "input_required") {
-      throw new Error(
-        `${this.server.name}: ${method} needs client input (multi round-trip), which this client does not support`
-      );
-    }
-    return result;
+    // Missing resultType means "complete" (pre-2026 servers). An
+    // "input_required" result is handled by the caller (only tools/call can
+    // answer it).
+    return message.result ?? {};
   }
 
   private async initialize(): Promise<void> {
@@ -323,12 +402,29 @@ class RawMcpClient {
     }
   }
 
-  async callTool(name: string, args: unknown, headerParams: HeaderParam[]): Promise<unknown> {
+  /**
+   * Calls a tool. Under MRTR a server may answer "input_required" instead of a
+   * result; the caller then retries the same call with `answer`. The server is
+   * stateless between the two legs, except for the `requestState` it minted.
+   */
+  async callTool(
+    name: string,
+    args: unknown,
+    headerParams: HeaderParam[],
+    answer?: { inputResponses: Record<string, ElicitationResponse>; requestState?: string }
+  ): Promise<CallResult> {
     const result = await this.request(
       "tools/call",
-      { name, arguments: args },
+      { name, arguments: args, ...answer },
       { "mcp-name": encodeHeaderValue(name), ...paramHeaders(headerParams, args) }
     );
+    if (result.resultType === "input_required") {
+      return {
+        kind: "input-required",
+        requests: supportedInputRequests(this.server.name, name, result.inputRequests),
+        requestState: typeof result.requestState === "string" ? result.requestState : undefined,
+      };
+    }
     const content = (result.content ?? []) as McpContentBlock[];
     if (result.isError) {
       const text = content
@@ -337,7 +433,7 @@ class RawMcpClient {
         .join("\n");
       throw new Error(`${this.server.name}: tool "${name}" failed: ${text}`);
     }
-    return content;
+    return { kind: "complete", content };
   }
 
   async close(): Promise<void> {
@@ -354,9 +450,14 @@ class RawMcpClient {
   }
 }
 
-export const rawLoader: McpToolLoader = async (server) => {
+export const rawLoader: McpToolLoader = async (server, hooks = {}) => {
   const client = new RawMcpClient(server);
   const definitions = await client.connect();
+  // Outcomes of calls made while probing in needsApproval, keyed by toolCallId,
+  // so execute doesn't call the tool a second time. Errors are kept too:
+  // thrown from needsApproval they'd abort the whole response, but rethrown
+  // from execute they become a tool error the model can read.
+  const settled = new Map<string, { content: McpContentBlock[] } | { error: unknown }>();
 
   const tools: ToolSet = {};
   for (const def of definitions) {
@@ -372,7 +473,52 @@ export const rawLoader: McpToolLoader = async (server) => {
       inputSchema: jsonSchema(
         def.inputSchema as Parameters<typeof jsonSchema>[0]
       ),
-      execute: (args) => client.callTool(def.name, args, headerParams),
+      // MRTR elicitation, carried by AI SDK tool approval (design §6). Approval
+      // is decided before execute, but only the server knows whether it will
+      // ask, so the call itself happens here.
+      needsApproval: async (args, { toolCallId, messages }) => {
+        // The user already answered (the request after their decision).
+        if (approvalFor(messages, toolCallId) !== undefined) return true;
+        let result: CallResult;
+        try {
+          result = await client.callTool(def.name, args, headerParams);
+        } catch (error) {
+          settled.set(toolCallId, { error });
+          return false;
+        }
+        if (result.kind === "complete") {
+          settled.set(toolCallId, { content: result.content });
+          return false;
+        }
+        hooks.onElicitation?.({
+          toolCallId,
+          server: server.name,
+          message: Object.values(result.requests).map((r) => r.params.message).join("\n"),
+        });
+        return true;
+      },
+      execute: async (args, { toolCallId, messages }) => {
+        const done = settled.get(toolCallId);
+        if (done) {
+          settled.delete(toolCallId);
+          if ("error" in done) throw done.error;
+          return done.content;
+        }
+        const result = await client.callTool(def.name, args, headerParams);
+        if (result.kind === "complete") return result.content;
+        // Only answer "yes" on the user's behalf if they actually approved.
+        if (approvalFor(messages, toolCallId) !== true) {
+          throw new Error(`${server.name}: tool "${def.name}" needs the user's confirmation`);
+        }
+        const retried = await client.callTool(def.name, args, headerParams, {
+          inputResponses: acceptAll(result.requests),
+          requestState: result.requestState,
+        });
+        if (retried.kind !== "complete") {
+          throw new Error(`${server.name}: tool "${def.name}" asked for input again after it was given`);
+        }
+        return retried.content;
+      },
     });
   }
 

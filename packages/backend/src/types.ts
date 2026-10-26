@@ -3,6 +3,8 @@ import type { Sandbox } from "@cloudflare/sandbox";
 export type AppEnv = {
   Bindings: {
     OPENAI_API_KEY: string;
+    /** "development" under `pnpm dev` (set by the dev script); anything else counts as production */
+    ENVIRONMENT?: string;
     /** Cloudflare account that owns the AI Gateway (wrangler.jsonc vars) */
     AI_GATEWAY_ACCOUNT_ID: string;
     /** AI Gateway name (wrangler.jsonc vars) */
@@ -27,6 +29,8 @@ export type AppEnv = {
     OLLAMA_BASE_URL?: string;
     /** CF Workers AI binding — required for cloud guardrail tier */
     AI: Ai;
+    /** Issue-tracker persona for local dev tokens: user-alice (admin), user-bob (member, default), user-carol (viewer) */
+    ISSUE_TRACKER_PERSONA?: string;
     /** Cloudflare Access team domain, the Access JWT `iss` (e.g. "https://enhancedigital.cloudflareaccess.com") */
     ACCESS_TEAM_DOMAIN?: string;
     /** Cloudflare Access application AUD tag, the Access JWT `aud` */

@@ -1,6 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useChat } from "@ai-sdk/react";
-import { DefaultChatTransport, type UIMessage } from "ai";
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+  type UIMessage,
+} from "ai";
 import {
   Conversation,
   ConversationContent,
@@ -46,7 +50,8 @@ import {
   SandboxTabs,
 } from "@/components/ai-elements/sandbox";
 import { MessageSquareIcon } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Confirmation } from "@/components/ai-elements/confirmation";
 import { Suggestions } from "@/components/ai-elements/suggestions";
 import { useChatTitle } from "@/lib/chat-title";
 import {
@@ -93,7 +98,9 @@ function ToolInvocation({ part }: { part: ToolPart }) {
 
 /** Sent by the backend after each answer (packages/backend/src/structured/followups.ts). */
 type Followups = { suggestions: string[]; title?: string };
-type ChatMessage = UIMessage<unknown, { followups: Followups }>;
+/** Sent when an MCP server pauses a tool call to ask the user (backend mcp/types.ts). */
+type McpElicitation = { toolCallId: string; server: string; message: string };
+type ChatMessage = UIMessage<unknown, { followups: Followups; "mcp-elicitation": McpElicitation }>;
 
 function followupsOf(message: ChatMessage): Followups | undefined {
   for (const part of message.parts) {
@@ -102,9 +109,15 @@ function followupsOf(message: ChatMessage): Followups | undefined {
   return undefined;
 }
 
-// Same-origin request: the Cloudflare Access session cookie goes along
-// automatically, so no auth header is needed.
-const transport = new DefaultChatTransport({ api: "/api/chat" });
+function elicitationFor(message: ChatMessage, toolCallId: string): McpElicitation | undefined {
+  for (const part of message.parts) {
+    if (part.type === "data-mcp-elicitation" && part.data.toolCallId === toolCallId) return part.data;
+  }
+  return undefined;
+}
+
+const isAwaitingApproval = (message: ChatMessage | undefined) =>
+  message?.parts.some((part) => "state" in part && part.state === "approval-requested") ?? false;
 
 export const Route = createFileRoute("/")({
   component: ChatPage,
@@ -112,13 +125,30 @@ export const Route = createFileRoute("/")({
 
 function ChatPage() {
   const [model, setModel] = useState(models[0].id);
-  const { messages, sendMessage, status } = useChat<ChatMessage>({ transport });
+  // The model rides on the transport, not on each sendMessage call, so the
+  // automatic resend after a confirmation uses the same model.
+  const modelRef = useRef(model);
+  modelRef.current = model;
+  const [transport] = useState(
+    () =>
+      // Same-origin request: the Cloudflare Access session cookie goes along
+      // automatically, so no auth header is needed.
+      new DefaultChatTransport<ChatMessage>({
+        api: "/api/chat",
+        body: () => ({ model: modelRef.current }),
+      })
+  );
+  const { messages, sendMessage, status, addToolApprovalResponse } = useChat<ChatMessage>({
+    transport,
+    // After the user answers a confirmation card, continue the same answer.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+  });
   const { setTitle } = useChatTitle();
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];
 
   const send = (text: string) => {
-    sendMessage({ text }, { body: { model } });
+    sendMessage({ text });
   };
   const handleSubmit = (message: { text: string }) => send(message.text);
 
@@ -138,7 +168,9 @@ function ChatPage() {
   // Chips belong to the latest answer only, and hide while a reply is in flight.
   const last = messages.at(-1);
   const suggestions =
-    status === "ready" && last?.role === "assistant" ? followupsOf(last)?.suggestions : undefined;
+    status === "ready" && last?.role === "assistant" && !isAwaitingApproval(last)
+      ? followupsOf(last)?.suggestions
+      : undefined;
 
   return (
     <div className="flex-1 flex flex-col min-h-0">
@@ -211,9 +243,38 @@ function ChatPage() {
                         );
                       }
                       if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
-                        return (
-                          <ToolInvocation key={i} part={part as ToolPart} />
-                        );
+                        const toolPart = part as ToolPart;
+                        const elicitation = elicitationFor(message, toolPart.toolCallId);
+                        if (elicitation && "approval" in toolPart && toolPart.approval) {
+                          const { approval } = toolPart;
+                          return (
+                            <div key={i}>
+                              <Confirmation
+                                server={elicitation.server}
+                                message={elicitation.message}
+                                state={
+                                  approval.approved === undefined
+                                    ? "pending"
+                                    : approval.approved
+                                      ? "approved"
+                                      : "cancelled"
+                                }
+                                onApprove={() => addToolApprovalResponse({ id: approval.id, approved: true })}
+                                onCancel={() =>
+                                  addToolApprovalResponse({
+                                    id: approval.id,
+                                    approved: false,
+                                    reason: "The user cancelled this action.",
+                                  })
+                                }
+                              />
+                              {toolPart.state !== "approval-requested" && (
+                                <ToolInvocation part={toolPart} />
+                              )}
+                            </div>
+                          );
+                        }
+                        return <ToolInvocation key={i} part={toolPart} />;
                       }
                       return null;
                     })}

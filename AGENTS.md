@@ -57,7 +57,16 @@ Connects to external MCP servers and exposes their tools alongside local tools. 
 
 Selected via `MCP_IMPL` env var (default: `"raw"`). Server list is static in `mcp/config.ts`. Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions.
 
-Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki).
+Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-tracker` (the course's issue-tracker MCP server, run locally from the `mcp-server` repo on `localhost:8787`).
+
+**Credentials** (`mcp/credentials.ts`): a server entry can have a `credential` source, resolved per request in `loadMcpTools` and merged into its headers. If it returns `null`, the server is skipped. The issue tracker uses the dev-token source: it mints a token from the tracker's development-only `POST /auth/dev-token` for `ISSUE_TRACKER_PERSONA` (`user-alice`/admin, `user-bob`/member (default), `user-carol`/viewer) and caches it until 60 s before expiry. It only runs when `ENVIRONMENT=development`, which `pnpm dev` sets. Don't use the request host to detect local dev: wrangler dev rewrites it to the custom domain.
+
+**MRTR elicitation** (raw loader only): when a server answers `tools/call` with `resultType: "input_required"` + `elicitation/create`, the call pauses for the user through AI SDK tool approval (design §6 of the `course-build-along-features` OpenSpec change):
+- The probe call happens in the tool's `needsApproval`. A complete result is cached for `execute`. A confirmation is streamed as a `data-mcp-elicitation` part and returns `true`.
+- The UI shows a confirmation card (`components/ai-elements/confirmation.tsx`), and `useChat` resends automatically (`lastAssistantMessageIsCompleteWithApprovalResponses`).
+- Approve: `execute` calls again for a fresh `requestState` and retries with `inputResponses` = accept.
+- Cancel: the model sees `execution-denied`.
+- Supported: confirmations only, meaning an elicitation form that is empty or all booleans. Anything else (other forms, sampling, roots) fails the tool call with an error naming it. The `ai-sdk` loader doesn't support MRTR.
 
 **To add an MCP server**: add an entry to the `mcpServers` array in `mcp/config.ts`.
 
@@ -146,6 +155,8 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 | `CHATBOT_URL` | No | Eval provider target (default: `http://localhost:8788`) |
 | `PROMPTFOO_GRADER_MODEL` | No | LLM-as-judge model (default: `openai:gpt-4o-mini`) |
 | `BRAINTRUST_API_KEY` | No | Braintrust eval extension |
+| `ENVIRONMENT` | No | `"production"` in `wrangler.jsonc`; `pnpm dev` passes `development`, which enables dev-only behavior such as issue-tracker dev tokens |
+| `ISSUE_TRACKER_PERSONA` | No | Local issue-tracker persona: `user-alice` (admin), `user-bob` (member, default), `user-carol` (viewer) |
 | `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |
 | `ACCESS_AUD` | No | Cloudflare Access application AUD tag, set in `wrangler.jsonc` `vars`; both needed for Langfuse user ids |
 
@@ -153,6 +164,7 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 
 - **Node 22** (see `.nvmrc`)
 - **Ollama** on `:11434` — needed for `gemma4:12b` model and `GUARDRAIL_TIER=local`
+- **Issue-tracker MCP server** (`mcp-server` repo, `pnpm dev`) on `:8787` — optional; without it the `issue-tracker` tools are skipped
 - Evals require the backend dev server running first (`pnpm dev` from root)
 
 ## Specs (OpenSpec)

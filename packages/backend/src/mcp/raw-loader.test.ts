@@ -60,7 +60,7 @@ describe("rawLoader — modern servers (2026-07-28)", () => {
     expect(call.headers["mcp-session-id"]).toBeUndefined();
     expect(call.body?.params?._meta).toMatchObject({
       "io.modelcontextprotocol/protocolVersion": "2026-07-28",
-      "io.modelcontextprotocol/clientCapabilities": {},
+      "io.modelcontextprotocol/clientCapabilities": { elicitation: {} },
     });
   });
 
@@ -86,14 +86,14 @@ describe("rawLoader — modern servers (2026-07-28)", () => {
     expect(calls.map((c) => c.body?.method)).toEqual(["tools/list"]);
   });
 
-  it("rejects input_required results it cannot answer", async () => {
+  it("rejects input_required results with no input requests", async () => {
     stubServer((call) =>
       call.body?.method === "tools/list"
         ? json({ result: { tools: [searchTool] } })
         : json({ result: { resultType: "input_required", inputRequests: {} } })
     );
     const { tools } = await rawLoader(server());
-    await expect(callTool(tools, "search", {})).rejects.toThrow(/multi round-trip/);
+    await expect(callTool(tools, "search", {})).rejects.toThrow(/sent no input requests/);
   });
 });
 

@@ -73,6 +73,25 @@ The UI renders this as a confirmation card. The user's answer goes back as the n
 
 The `ai-sdk` loader stays unchanged. Its limitation is documented as a lesson-13 contrast between the two loaders.
 
+**Spike outcome (task 5.1): tool approval works as the carrier, with the probe inside `needsApproval`.**
+
+What the spike established:
+- **Wire format** (curl against the local tracker, as `user-alice`/`admin`): the first `tools/call` returns `{ resultType: "input_required", inputRequests: { confirm: { method: "elicitation/create", params: { message, requestedSchema } } }, requestState }`. The retry repeats the same `name`/`arguments` and adds `inputResponses: { confirm: { action: "accept", content: { proceed: true } } }` and the echoed `requestState`. `action: "decline"` returns "Project deletion cancelled." A `member` gets `Forbidden: requires one of [admin]` before any elicitation, so the delete demo needs `ISSUE_TRACKER_PERSONA=user-alice`.
+- **AI SDK v7 tool approval** (mock-model test, two requests):
+  - Request 1: `needsApproval(input, { toolCallId, messages })` runs (it may be async). `execute` doesn't. The step ends with a `tool-approval-request`.
+  - Request 2, approved: `needsApproval` runs **again**, then `execute` runs once.
+  - Request 2, denied: neither runs. The model gets `{ type: "execution-denied", reason }`.
+- **What it can carry:** `ToolApprovalResponse` holds only `approved` + `reason`. It can answer a yes/no confirmation, but not a form.
+
+Why the probe has to live in `needsApproval`: approval is decided before `execute`, but a server only reveals that it needs input during the call. The design's "return `input-required` as a tool result" step therefore happens inside `needsApproval`. The raw client's `callTool` returns `{ kind: "input-required", … }` instead of throwing, and the tool wrapper reacts:
+1. **`needsApproval`.** If `messages` already has an approval response for this `toolCallId` (request 2), return `true` without probing. Otherwise call the tool:
+   - `complete` → cache the result by `toolCallId` and return `false`. `execute` returns the cached result, so the call isn't made twice.
+   - `input-required` for a supported elicitation → write a `data-mcp-elicitation` part `{ toolCallId, message }` (the card needs the server's message; the approval request only carries the tool input) and return `true`.
+2. **`execute` after approval.** Call again: the server is stateless, so this mints a fresh `requestState`. Then retry with `inputResponses` = accept, with each boolean field `true`.
+3. **Denied.** Nothing reaches the server, and the model sees `execution-denied` with reason "The user cancelled …". Under MRTR, declining and never retrying are equivalent: nothing is pending server-side.
+
+Supported elicitations: a `requestedSchema` with no properties, or only boolean ones. Any other form, and any non-elicitation input request (sampling, roots), fails the call with an error naming it. The `/api/mcp/answer` fallback isn't needed.
+
 ### 7. Bug-report workflow
 
 ```

@@ -1,6 +1,7 @@
 import type { ToolSet } from "ai";
 import type { AppEnv } from "../types";
-import type { McpConnection, McpToolLoader } from "./types";
+import type { McpConnection, McpHooks, McpServerConfig, McpToolLoader } from "./types";
+import type { CredentialContext } from "./credentials";
 import { mcpServers } from "./config";
 import { aiSdkLoader } from "./ai-sdk-loader";
 import { rawLoader } from "./raw-loader";
@@ -24,15 +25,36 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   ]);
 }
 
+/** Merges the server's per-request credential into its headers; null → skip. */
+async function withCredentials(
+  server: McpServerConfig,
+  ctx: CredentialContext
+): Promise<McpServerConfig | null> {
+  if (!server.credential) return server;
+  const headers = await server.credential(ctx);
+  if (!headers) return null;
+  return { ...server, headers: { ...server.headers, ...headers } };
+}
+
 export async function loadMcpTools(
-  env: AppEnv["Bindings"]
+  env: AppEnv["Bindings"],
+  ctx: Omit<CredentialContext, "env">,
+  hooks?: McpHooks
 ): Promise<{ tools: ToolSet; close: () => Promise<void> }> {
   const loader: McpToolLoader =
     env.MCP_IMPL === "ai-sdk" ? aiSdkLoader : rawLoader;
   const enabled = mcpServers.filter((server) => server.enabled);
 
   const results = await Promise.allSettled(
-    enabled.map((server) => withTimeout(loader(server), server.name))
+    enabled.map((server) =>
+      withTimeout(
+        // null: no credential for this request (e.g. dev tokens when deployed)
+        withCredentials(server, { env, ...ctx }).then((resolved) =>
+          resolved ? loader(resolved, hooks) : null
+        ),
+        server.name
+      )
+    )
   );
 
   const tools: ToolSet = {};
@@ -47,6 +69,7 @@ export async function loadMcpTools(
       );
       return;
     }
+    if (!result.value) return;
     connections.push(result.value);
     for (const [name, remoteTool] of Object.entries(result.value.tools)) {
       tools[`${server.name}_${name}`] = remoteTool;

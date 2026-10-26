@@ -185,7 +185,7 @@ Two interchangeable MCP client implementations behind a common `McpToolLoader` i
 
 | Implementation | File | Description |
 |---------------|------|-------------|
-| **Raw** (default) | `mcp/raw-loader.ts` | Hand-rolled Streamable HTTP client (~150 lines). Handles both plain JSON and SSE JSON-RPC responses. |
+| **Raw** (default) | `mcp/raw-loader.ts` | Hand-rolled Streamable HTTP client. Handles both plain JSON and SSE JSON-RPC responses, and MRTR confirmations. |
 | **AI SDK** | `mcp/ai-sdk-loader.ts` | Uses `@ai-sdk/mcp` `createMCPClient` |
 
 Selected via the `MCP_IMPL` env var (default: `"raw"`).
@@ -198,6 +198,7 @@ Defined in `mcp/config.ts`:
 |--------|-----|---------|
 | `cf-docs` | `https://docs.mcp.cloudflare.com/mcp` | Cloudflare documentation search |
 | `deepwiki` | `https://mcp.deepwiki.com/mcp` | Open-source project knowledge base |
+| `issue-tracker` | `http://localhost:8787/mcp` | The course's issue tracker (projects, issues), local dev only |
 
 Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions with local tools.
 
@@ -206,6 +207,30 @@ Remote tools are namespaced as `${serverName}_${toolName}` to prevent collisions
 - All servers connect in parallel with a **5-second timeout** per server
 - Failed connections log a warning and are skipped — the chatbot continues with available tools
 - Sessions are cleaned up via `DELETE` in the `onEnd` callback (deferred with `waitUntil`)
+
+### The Issue Tracker (local)
+
+The `issue-tracker` server is the course's own MCP server (the `mcp-server` repo). It must run on port **8787**, because it rejects any other Host. That's why this backend runs on 8788.
+
+1. In the `mcp-server` repo, follow its README to set up the local database, then run `pnpm dev`.
+2. Here, run `pnpm dev` from the root. Its `--var ENVIRONMENT:development` turns on dev tokens.
+3. Ask the chat to *"list the open issues in the demo project"*. It calls `issue-tracker_search_issues` on `proj-demo`.
+
+There are no real accounts. Each call carries a development token minted for a **persona**:
+
+| Persona | Role | Can |
+|---------|------|-----|
+| `user-alice` | admin | everything, including `delete_project` |
+| `user-bob` (default) | member | read, create and update issues |
+| `user-carol` | viewer | read only |
+
+To switch persona, set `ISSUE_TRACKER_PERSONA` in `.dev.vars` and restart, or for one session run `npx wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_PERSONA:user-alice`. The tracker's `/auth/dev-token` endpoint exists only in development. When deployed, the source returns nothing and the server is skipped until per-user OAuth is added.
+
+**Confirmations (MRTR elicitation).** Some tools ask before acting. As Alice, *"delete the project <id>"* shows a confirmation card with the tracker's message:
+- **Approve** retries the call with the answer, and the project is deleted.
+- **Cancel** leaves the project, and the model is told it was cancelled.
+
+Only the raw client (`MCP_IMPL=raw`) supports this. To restore the demo data afterwards, run `pnpm db:reset:local` in `mcp-server`.
 
 ### Adding an MCP Server
 

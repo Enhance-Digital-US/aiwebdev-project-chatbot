@@ -22,6 +22,14 @@ LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
 
 # --- Optional ---------------------------------------------------------------
 
+# `pnpm dev` already passes --var ENVIRONMENT:development. Set it here too if
+# you run `wrangler dev` directly (e.g. in CI).
+ENVIRONMENT=development
+
+# Issue-tracker persona for local dev tokens (the tracker runs on :8787):
+# user-alice (admin), user-bob (member, default), user-carol (viewer)
+ISSUE_TRACKER_PERSONA=user-bob
+
 # Langfuse region host (default: https://us.cloud.langfuse.com)
 LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 
