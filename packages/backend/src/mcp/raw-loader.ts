@@ -524,3 +524,28 @@ export const rawLoader: McpToolLoader = async (server, hooks = {}) => {
 
   return { tools, close: () => client.close() };
 };
+
+/**
+ * One tool call outside a chat (e.g. from a workflow step): connect, call,
+ * return the content. A server asking for input fails the call, since there
+ * is no user to ask.
+ */
+export async function callMcpTool(
+  server: McpServerConfig,
+  name: string,
+  args: Record<string, unknown>
+): Promise<McpContentBlock[]> {
+  const client = new RawMcpClient(server);
+  try {
+    const definitions = await client.connect();
+    const def = definitions.find((d) => d.name === name);
+    if (!def) throw new Error(`${server.name}: no tool "${name}"`);
+    const result = await client.callTool(name, args, collectHeaderParams(def.inputSchema));
+    if (result.kind !== "complete") {
+      throw new Error(`${server.name}: tool "${name}" asked for user input outside a chat`);
+    }
+    return result.content;
+  } finally {
+    await client.close();
+  }
+}

@@ -5,7 +5,7 @@
 AI chatbot — pnpm monorepo with three packages, deployed to Cloudflare as a single Worker (Hono API + frontend via Workers Static Assets) at `https://chatbot.course-projects.ai-web.dev` (Workers Custom Domain).
 
 - **`packages/frontend`** — React 19 + Vite, TanStack Router, Tailwind CSS 4, shadcn/ui (radix-nova style, incl. its AI components)
-- **`packages/backend`** — Hono on Cloudflare Workers, AI SDK v7, OpenAI + Ollama providers
+- **`packages/backend`** — Hono on Cloudflare Workers, AI SDK v7, OpenAI + Ollama providers, a Workflow (bug reports) and D1
 - **`packages/evals`** — Promptfoo offline evals, Braintrust extension, Langfuse online scoring
 
 ## Commands
@@ -80,6 +80,29 @@ Current skills: `eli5-explainer`, `senior-architect`.
 
 **To add a skill**: create a `skills/<name>/SKILL.md`, add a raw import in `discovery.ts`, add the `{ raw, path }` entry to the `rawSkills` array.
 
+### Bug-report workflow (`workflows/`, `routes/workflows.ts`)
+
+A Cloudflare Workflow (`BugReportWorkflow`, binding `BUG_REPORT`) turns a pasted error log into a filed issue. The `fileBugReport` tool starts it and returns the instance id at once.
+
+**Steps:**
+1. `redact`: deterministic secret masking (`redact.ts`), no model call.
+2. `draft`: structured output to `BugDraft`. Off-schema output throws, so the step retries.
+3. `dedupe`: `search_issues` keyword search, ranked by title overlap.
+4. `waitForEvent("bug-approval")`: up to `BUG_REPORT_APPROVAL_TIMEOUT` (default 24 h).
+5. `file`: `create_issue` with `external_id` = instance id, so a retry returns the same issue.
+
+**Outcomes** are the run's `output`: `filed`, `rejected`, `expired` or `not-permitted`. A role refusal throws `NonRetryableError`; keep its default name, because a custom name makes it retry.
+
+**Rules:**
+- Params never hold tokens: steps get issue-tracker credentials from the same credential source as chat.
+- Workflows' `status()` is coarse, so the workflow writes its step, draft, duplicates and result to the D1 table `bug_reports` (`progress.ts`, `migrations/0001_bug_reports.sql`).
+
+**Routes:**
+- `GET /api/workflows/:id` returns that row plus the status.
+- `POST /api/workflows/:id/decision` (`{ decision, edits? }`) is starter-only when deployed and open locally. It checks the run is waiting first, because `sendEvent` doesn't fail on a finished run.
+
+**Local setup:** apply the schema with `npx wrangler d1 migrations apply chatbot --local` (from `packages/backend`). `BUG_REPORT_CHAOS=fail-after-file` (dev only) fails the first filing attempt after the issue exists, to demonstrate idempotent retries.
+
 ### Guardrails (`guardrails/`)
 
 Three-tier runtime safety via AI SDK Language Model Middleware. Wraps the model — intercepts every step in the agentic loop (user messages, tool results, model output).
@@ -107,7 +130,7 @@ Login is enforced at the edge by **Cloudflare Zero Trust Access** (Clerk as the 
 
 TanStack Router with routes in `src/routes/`. Chat UI wrappers live in `src/components/ai-elements/`. They keep the old AI SDK Elements export names but are built on shadcn/ui primitives: Trace, Code Block, Message, Bubble, Message Scroller and Dropdown Menu, all in `src/components/ui/`. Add new pieces with `pnpm dlx shadcn@latest add <name>` (style `radix-nova`; see https://ui.shadcn.com/docs/ai-elements), not the deprecated `ai-elements` CLI. `src/app.css` imports `tw-animate-css` and `shadcn/tailwind.css`, which provide the `shimmer`, `data-open` and accordion utilities. `useChat` from `@ai-sdk/react` manages all chat state. No auth code: Cloudflare Access handles sign-in before the SPA loads, and its session cookie rides along on same-origin `/api` calls.
 
-Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-title.tsx`).
+Bug-report runs render as `BugReportCard` (`components/ai-elements/bug-report-card.tsx`), which polls `GET /api/workflows/:id`. Pending run ids are kept in `localStorage`, so a refresh restores their cards (until chats are persisted). Message parts renderer handles: `reasoning` (collapsible trace), `text`, `tool-*` (static tools via `ToolInvocation`), `dynamic-tool` (MCP tools), and `data-followups` (suggestion chips under the latest answer; the first titled message sets the header title via `lib/chat-title.tsx`).
 
 ## Evals (`packages/evals/`)
 
@@ -158,6 +181,8 @@ All backend secrets go in `packages/backend/.dev.vars` (gitignored; start from `
 | `ENVIRONMENT` | No | `"production"` in `wrangler.jsonc`; `pnpm dev` passes `development`, which enables dev-only behavior such as issue-tracker dev tokens |
 | `ISSUE_TRACKER_URL` | No | Issue-tracker MCP endpoint; the hosted tracker in `wrangler.jsonc` `vars`, `http://localhost:8787/mcp` under `pnpm dev` |
 | `ISSUE_TRACKER_PERSONA` | No | Local issue-tracker persona: `user-alice` (admin), `user-bob` (member, default), `user-carol` (viewer) |
+| `BUG_REPORT_APPROVAL_TIMEOUT` | No | How long a bug report waits for approval (default `24 hours`) |
+| `BUG_REPORT_CHAOS` | No | Dev-only fault injection: `fail-after-file` |
 | `ACCESS_TEAM_DOMAIN` | No | Cloudflare Access team URL (JWT issuer + JWKS host), set in `wrangler.jsonc` `vars` |
 | `ACCESS_AUD` | No | Cloudflare Access application AUD tag, set in `wrangler.jsonc` `vars`; both needed for Langfuse user ids |
 

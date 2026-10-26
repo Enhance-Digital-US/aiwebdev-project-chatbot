@@ -32,10 +32,10 @@ Slices land in lesson order (design §1) so `course-checkpoint-history` can repl
 ## 6. Lesson 16: bug-report workflow
 
 - [x] 6.1 Spike Workflows create / waitForEvent / sendEvent / status with a two-step workflow in `wrangler dev`; record any API differences in design §7
-- [ ] 6.2 Add the Workflow and D1 bindings, the `bug_reports` progress table, and `BugReportWorkflow` with redact, draft, dedupe, approval and file (design §7); add unit tests for redaction (keys, bearer tokens, emails, IPs) and the `BugDraft` schema
-- [ ] 6.3 Add the `fileBugReport` tool, `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` with the starter-only check; add tests for the decision authorization
-- [ ] 6.4 Add the workflow card; verify end to end: paste a log, refresh, the card is restored from the instance id, approve, exactly one issue is filed
-- [ ] 6.5 Verify the failure paths: a forced retry of `file` files no second issue (needs mcp-server `idempotent-issue-creation`); reject → `rejected`; timeout (shortened in dev) → `expired`; `ISSUE_TRACKER_PERSONA=user-carol` → `not-permitted` after one attempt
+- [x] 6.2 Add the Workflow and D1 bindings, the `bug_reports` progress table, and `BugReportWorkflow` with redact, draft, dedupe, approval and file (design §7); add unit tests for redaction (keys, bearer tokens, emails, IPs) and the `BugDraft` schema
+- [x] 6.3 Add the `fileBugReport` tool, `GET /api/workflows/:id` and `POST /api/workflows/:id/decision` with the starter-only check; add tests for the decision authorization
+- [x] 6.4 Add the workflow card; verify end to end: paste a log, refresh, the card is restored from the instance id, approve, exactly one issue is filed
+- [x] 6.5 Verify the failure paths: a forced retry of `file` files no second issue (needs mcp-server `idempotent-issue-creation`); reject → `rejected`; timeout (shortened in dev) → `expired`; `ISSUE_TRACKER_PERSONA=user-carol` → `not-permitted` after one attempt
 - [ ] 6.6 Document the workflow in AGENTS.md and the README; verify the documented flow works as written
 
 ## 7. Lessons 17–18: guardrails and evals

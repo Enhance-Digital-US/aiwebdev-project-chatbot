@@ -26,7 +26,7 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
 }
 
 /** Merges the server's per-request credential into its headers; null → skip. */
-async function withCredentials(
+export async function withCredentials(
   server: McpServerConfig,
   ctx: CredentialContext
 ): Promise<McpServerConfig | null> {
