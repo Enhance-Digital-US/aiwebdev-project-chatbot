@@ -57,7 +57,10 @@ beforeEach(() => {
   db = fakeD1();
   env = { DB: db.d1, TOKEN_ENCRYPTION_KEY: KEY } as AppEnv["Bindings"];
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.restoreAllMocks();
+});
 
 const connect = (owner: string, accessToken: string, refreshToken: string | undefined, expiresAt: number) =>
   saveTokens(env, owner, "client-1", { accessToken, refreshToken, expiresAt }, 0);
@@ -76,10 +79,28 @@ describe("issue-tracker token store", () => {
     expect(await isConnected(env.DB, "bob")).toBe(false);
   });
 
-  it("won't decrypt one user's row as another's", async () => {
+  it("won't decrypt one user's row as another's, and drops it", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
     await connect("alice", "access-1", "refresh-1", HOUR);
     db.rows.set("mallory", db.rows.get("alice")!);
-    await expect(loadTokens(env, "mallory")).rejects.toThrow();
+    expect(await loadTokens(env, "mallory")).toBeNull();
+    expect(await isConnected(env.DB, "mallory")).toBe(false);
+    expect(await isConnected(env.DB, "alice")).toBe(true);
+  });
+
+  it("drops a row sealed with an earlier key, so the user is offered to connect again", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    await connect("alice", "access-1", "refresh-1", HOUR);
+    env.TOKEN_ENCRYPTION_KEY = btoa(String.fromCharCode(...new Uint8Array(32).fill(9)));
+    expect(await accessTokenFor(env, "alice", RESOURCE, () => 0)).toBeNull();
+    expect(await isConnected(env.DB, "alice")).toBe(false);
+  });
+
+  it("fails without deleting anything when the key is missing", async () => {
+    await connect("alice", "access-1", "refresh-1", HOUR);
+    env.TOKEN_ENCRYPTION_KEY = undefined;
+    await expect(loadTokens(env, "alice")).rejects.toThrow("TOKEN_ENCRYPTION_KEY is not set");
+    expect(await isConnected(env.DB, "alice")).toBe(true);
   });
 });
 

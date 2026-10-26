@@ -60,15 +60,25 @@ export async function loadTokens(env: Bindings, owner: string): Promise<StoredTo
     .first<TokenRow>();
   if (!row) return null;
   const key = env.TOKEN_ENCRYPTION_KEY;
-  return {
-    clientId: row.client_id,
-    accessToken: await decrypt(key, row.access_token_enc, context(owner, "access")),
-    refreshToken: row.refresh_token_enc
-      ? await decrypt(key, row.refresh_token_enc, context(owner, "refresh"))
-      : undefined,
-    sealedRefreshToken: row.refresh_token_enc,
-    expiresAt: row.expires_at,
-  };
+  // A missing key is a config error: fail without touching the stored tokens.
+  if (!key) throw new Error("TOKEN_ENCRYPTION_KEY is not set");
+  try {
+    return {
+      clientId: row.client_id,
+      accessToken: await decrypt(key, row.access_token_enc, context(owner, "access")),
+      refreshToken: row.refresh_token_enc
+        ? await decrypt(key, row.refresh_token_enc, context(owner, "refresh"))
+        : undefined,
+      sealedRefreshToken: row.refresh_token_enc,
+      expiresAt: row.expires_at,
+    };
+  } catch (error) {
+    // Sealed with another key (it was rotated) or for another owner: unusable,
+    // so drop it and let the user connect again instead of failing every call.
+    console.warn(`Dropping undecryptable issue-tracker tokens for ${owner}:`, error);
+    await deleteTokens(env.DB, owner, row.refresh_token_enc);
+    return null;
+  }
 }
 
 /** Disconnects the owner; with `onlyIf`, only if the row still holds that refresh token. */

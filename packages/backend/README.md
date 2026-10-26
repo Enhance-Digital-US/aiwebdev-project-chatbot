@@ -131,7 +131,13 @@ For tracing, the Worker reads the user from the signed `Cf-Access-Jwt-Assertion`
 
 ### Step 5: Deploy
 
-From the repo root:
+First apply any new D1 migrations to the production database (from `packages/backend`). Every chat request reads the `chats` and `issue_tracker_tokens` tables, so deploying before they exist breaks chat:
+
+```bash
+npx wrangler d1 migrations apply chatbot --remote
+```
+
+Then, from the repo root:
 
 ```bash
 pnpm run deploy
@@ -380,7 +386,7 @@ cd packages/backend
 npx wrangler d1 migrations apply chatbot --local
 ```
 
-This creates the `bug_reports` table that holds each run's progress for the card (Workflows' `status()` only says running or complete), and the saved-chat tables. Before deploying, run `npx wrangler d1 create chatbot`, add its `database_id` to `wrangler.jsonc`, and apply the migrations with `--remote`.
+This creates the `bug_reports` table that holds each run's progress for the card (Workflows' `status()` only says running or complete), the saved-chat tables, and the issue-tracker tokens. Before deploying, run `npx wrangler d1 create chatbot`, add its `database_id` to `wrangler.jsonc`, and apply the migrations with `--remote`.
 
 ### Try it
 
