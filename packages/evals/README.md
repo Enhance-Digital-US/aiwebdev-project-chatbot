@@ -234,7 +234,9 @@ Tests that tools are invoked correctly and results incorporated:
 
 ## CI Integration
 
-The GitHub Actions workflow (`.github/workflows/evals.yml`) runs automatically on PRs to `main` that touch `packages/backend/**` or `packages/evals/**`.
+The GitHub Actions workflow (`.github/workflows/evals.yml`) is **opt-in**. It never runs by default. Start it in either of two ways:
+- **Actions → Evals → Run workflow** (`workflow_dispatch`), on any branch.
+- Add the **`run-evals`** label to a PR to `main` that touches `packages/backend/**`, `packages/frontend/**` or `packages/evals/**`. Each later push to that PR re-runs it while the label stays on.
 
 ### Pipeline
 

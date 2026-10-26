@@ -149,7 +149,7 @@ Three dataset suites in `datasets/`:
 - Quality: **≥ 85%**
 - Tool use: **≥ 80%**
 
-PRs are gated on these thresholds. Evals require the dev server running, and the issue-tracker and bug-report cases also need the issue tracker on `:8787`. CI checks out the `mcp-server` repo at `ISSUE_TRACKER_REF` (a course tag, currently `lesson-16`) and runs it locally. CI needs the `AI_GATEWAY_TOKEN` secret.
+CI evals are **opt-in**: run the Evals workflow manually (Actions → Evals → Run workflow), or add the `run-evals` label to a PR (each later push re-runs them while the label stays). When they run, a suite below its threshold fails the job. Evals require the dev server running, and the issue-tracker and bug-report cases also need the issue tracker on `:8787`. CI checks out the `mcp-server` repo at `ISSUE_TRACKER_REF` (a course tag, currently `lesson-16`) and runs it locally. CI needs the `AI_GATEWAY_TOKEN` secret.
 
 ### Extensions
 

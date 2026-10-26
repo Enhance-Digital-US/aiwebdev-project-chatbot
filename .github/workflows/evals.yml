@@ -1,8 +1,13 @@
 name: Evals
 
+# Opt-in: evals cost model calls and take minutes, so they never run by default.
+# Run them from the Actions tab ("Run workflow"), or add the `run-evals` label to
+# a pull request; while the label stays on, each push to that PR re-runs them.
 on:
+  workflow_dispatch:
   pull_request:
     branches: [main]
+    types: [labeled, opened, synchronize, reopened]
     paths:
       - "packages/backend/**"
       - "packages/frontend/**"
@@ -10,6 +15,10 @@ on:
 
 jobs:
   eval:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'run-evals') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'run-evals'))
     runs-on: ubuntu-latest
     timeout-minutes: 15
 

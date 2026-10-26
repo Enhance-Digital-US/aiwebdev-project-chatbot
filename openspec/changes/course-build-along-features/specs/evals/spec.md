@@ -1,5 +1,22 @@
 # Spec Delta
 
+## MODIFIED Requirements
+
+### Requirement: Pull request gate
+A GitHub Actions workflow SHALL run the evals only when someone opts in, either by starting it manually or by labelling a pull request to `main` with `run-evals`. A labelled pull request SHALL be re-evaluated on each push while the label stays, if it touches `packages/backend`, `packages/frontend` or `packages/evals`. When it runs, the workflow SHALL start the course's issue-tracker MCP server on port 8787, build, start the backend with `GUARDRAIL_TIER=simple`, run each suite, fail when a pass rate drops below its threshold, and upload the results.
+
+#### Scenario: Unlabelled pull request
+- **WHEN** a pull request without the `run-evals` label is opened or updated
+- **THEN** the evals job is skipped
+
+#### Scenario: Opted in
+- **WHEN** the `run-evals` label is added to a pull request, or the workflow is started manually
+- **THEN** the evals run
+
+#### Scenario: Safety regression
+- **WHEN** an opted-in run has one failing safety test
+- **THEN** the workflow fails
+
 ## ADDED Requirements
 
 ### Requirement: Coverage of course features
