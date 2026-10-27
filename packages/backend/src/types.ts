@@ -1,4 +1,5 @@
 import type { Sandbox } from "@cloudflare/sandbox";
+import type { BugReportParams } from "./workflows/bug-report";
 
 export type AppEnv = {
   Bindings: {
@@ -25,6 +26,14 @@ export type AppEnv = {
     SANDBOX?: DurableObjectNamespace<Sandbox>;
     /** Ollama base URL for the gemma4:12b model (default: http://localhost:11434) */
     OLLAMA_BASE_URL?: string;
+    /** Bug-report workflow (workflows/bug-report.ts) */
+    BUG_REPORT: Workflow<BugReportParams>;
+    /** D1: bug_reports progress (migrations/) */
+    DB: D1Database;
+    /** How long a bug report waits for approval (default "24 hours"; shorten in .dev.vars to test expiry) */
+    BUG_REPORT_APPROVAL_TIMEOUT?: string;
+    /** Local fault injection: "fail-after-file" fails the first filing attempt after the issue exists */
+    BUG_REPORT_CHAOS?: string;
     /** Issue-tracker MCP endpoint: the hosted tracker in wrangler.jsonc vars; `pnpm dev` passes localhost:8787 */
     ISSUE_TRACKER_URL?: string;
     /** Issue-tracker persona for local dev tokens: user-alice (admin), user-bob (member, default), user-carol (viewer) */

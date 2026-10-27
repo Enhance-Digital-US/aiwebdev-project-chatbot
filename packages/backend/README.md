@@ -62,6 +62,8 @@ After a successful request, check your [Langfuse dashboard](https://us.cloud.lan
 | Route | Method | Description |
 |-------|--------|-------------|
 | `POST /api/chat` | POST | Accepts `{ messages, model? }`, streams back via AI SDK UIMessageStream |
+| `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
+| `POST /api/workflows/:id/decision` | POST | `{ decision: "approve" \| "reject", edits? }` for a run waiting for approval (starter only when deployed) |
 
 The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models are registered in `providers.ts`:
 
@@ -178,6 +180,53 @@ Skills are imported as raw text at build time via Wrangler module rules (`"type"
 1. Create `skills/<name>/SKILL.md` with frontmatter and instructions
 2. Add a raw import in `skills/discovery.ts`
 3. Add the `{ raw, path }` entry to the `rawSkills` array
+
+## Bug Reports — Durable Workflow
+
+Paste an error log and ask the assistant to file it as a bug. The `fileBugReport` tool starts a **Cloudflare Workflow**, and a card in the chat follows it:
+
+```
+redact → draft → dedupe → wait for approval → file
+```
+
+| Step | What happens |
+|------|--------------|
+| redact | API keys, bearer tokens/JWTs, secret assignments, emails and IPs are masked. No model sees the raw log. |
+| draft | A structured `BugDraft` (title, summary, steps, severity, component). Invalid output is retried, never filed. |
+| dedupe | Searches the issue tracker for similar open issues and lists them on the card. |
+| approval | The run pauses for up to 24 hours. It survives page refreshes, restarts and deploys. Approve, edit, or reject. |
+| file | `create_issue` with `external_id` = the instance id, so a retried step returns the issue it already created. |
+
+### Setup (once)
+
+```bash
+cd packages/backend
+npx wrangler d1 migrations apply chatbot --local
+```
+
+This creates the `bug_reports` table that holds each run's progress for the card. Workflows' `status()` only says running or complete.
+
+### Try it
+
+With the issue tracker running on 8787 and `pnpm dev`:
+1. Paste a stack trace and ask *"file this as a bug"*. A card appears and fills in the redacted draft and possible duplicates.
+2. Refresh the page. The card comes back from its instance id.
+3. Click **Approve**. One issue is filed in `proj-demo`.
+
+API:
+- `GET /api/workflows/:id`: status, current step, draft, duplicates, result.
+- `POST /api/workflows/:id/decision`: `{ "decision": "approve" | "reject", "edits"?: {…} }`. When deployed, only the user who started the run may decide.
+
+### Failure paths
+
+| Try | Expect |
+|-----|--------|
+| **Reject** | `rejected`, nothing filed |
+| Start `wrangler dev` with `--var "BUG_REPORT_APPROVAL_TIMEOUT:20 seconds"` and wait | `expired`, nothing filed |
+| `--var BUG_REPORT_CHAOS:fail-after-file`, approve | the first filing attempt fails after the issue exists; the retry returns it (`replayed: true`), one issue |
+| `ISSUE_TRACKER_PERSONA=user-carol` (viewer), approve | `not-permitted` after one attempt |
+
+For flags not set in `pnpm dev`, run the backend directly: `npx wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp --var …`.
 
 ## Sandbox Code Execution
 

@@ -52,6 +52,11 @@ import {
 import { MessageSquareIcon } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Confirmation } from "@/components/ai-elements/confirmation";
+import {
+  BugReportCard,
+  rememberBugReport,
+  rememberedBugReports,
+} from "@/components/ai-elements/bug-report-card";
 import { Suggestions } from "@/components/ai-elements/suggestions";
 import { useChatTitle } from "@/lib/chat-title";
 import {
@@ -116,6 +121,17 @@ function elicitationFor(message: ChatMessage, toolCallId: string): McpElicitatio
   return undefined;
 }
 
+/** Instance ids of bug-report workflows started in these messages. */
+function bugReportIds(messages: ChatMessage[]): string[] {
+  return messages.flatMap((m) =>
+    m.parts.flatMap((part) =>
+      part.type === "tool-fileBugReport" && part.state === "output-available"
+        ? [(part.output as { instanceId: string }).instanceId]
+        : []
+    )
+  );
+}
+
 const isAwaitingApproval = (message: ChatMessage | undefined) =>
   message?.parts.some((part) => "state" in part && part.state === "approval-requested") ?? false;
 
@@ -165,6 +181,13 @@ function ChatPage() {
     return () => setTitle(null);
   }, [title, setTitle]);
 
+  // Bug-report runs outlive the page: remember them so a refresh can bring
+  // their cards back (until chats are persisted in lesson 19).
+  const startedIds = useMemo(() => bugReportIds(messages), [messages]);
+  useEffect(() => startedIds.forEach(rememberBugReport), [startedIds]);
+  const [restoredIds] = useState(rememberedBugReports);
+  const restored = restoredIds.filter((id) => !startedIds.includes(id));
+
   // Chips belong to the latest answer only, and hide while a reply is in flight.
   const last = messages.at(-1);
   const suggestions =
@@ -177,7 +200,10 @@ function ChatPage() {
       <Conversation className="flex-1 min-h-0">
         {/* pr-16 keeps user bubbles clear of the floating download button */}
         <ConversationContent className="pr-16">
-          {messages.length === 0 ? (
+          {restored.map((id) => (
+            <BugReportCard key={id} instanceId={id} />
+          ))}
+          {messages.length === 0 && restored.length === 0 ? (
             <ConversationEmptyState
               className="flex-1"
               title="What can I help you with?"
@@ -241,6 +267,10 @@ function ChatPage() {
                             </SandboxContent>
                           </Sandbox>
                         );
+                      }
+                      if (part.type === "tool-fileBugReport" && part.state === "output-available") {
+                        const { instanceId } = part.output as { instanceId: string };
+                        return <BugReportCard key={i} instanceId={instanceId} />;
                       }
                       if (part.type.startsWith("tool-") || part.type === "dynamic-tool") {
                         const toolPart = part as ToolPart;
