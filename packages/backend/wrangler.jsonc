@@ -37,7 +37,9 @@
     "MCP_IMPL": "raw",
     // Set to "e2b" or "cloudflare" to enable real sandbox execution (default: stub)
     // "e2b" requires the E2B_API_KEY secret.
-    "SANDBOX_PROVIDER": "e2b"
+    "SANDBOX_PROVIDER": "e2b",
+    // "local" cannot work when deployed (no Ollama at the edge). .dev.vars overrides this locally.
+    "GUARDRAIL_TIER": "simple"
   },
 
   // Bug-report workflow (lesson 16): redact → draft → dedupe → approval → file.
@@ -52,6 +54,11 @@
   "d1_databases": [
     { "binding": "DB", "database_name": "chatbot", "migrations_dir": "migrations" }
   ],
+
+  // Workers AI binding for cloud guardrail tier (Llama Guard)
+  "ai": {
+    "binding": "AI"
+  },
 
   "observability": {
     "enabled": true

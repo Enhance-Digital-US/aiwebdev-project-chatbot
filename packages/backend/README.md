@@ -1,6 +1,6 @@
 # Chatbot API Backend
 
-Hono + Cloudflare Workers backend with AI SDK v7. The sections below cover what this checkpoint of the course chatbot includes.
+Hono + Cloudflare Workers backend with AI SDK v7, multi-provider model support, MCP tool federation, agent skills, three-tier guardrails, sandboxed code execution, and Langfuse observability via OpenTelemetry.
 
 ## Prerequisites
 
@@ -9,7 +9,7 @@ Hono + Cloudflare Workers backend with AI SDK v7. The sections below cover what 
 - A [Cloudflare account](https://dash.cloudflare.com/sign-up)
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - A [Langfuse account](https://cloud.langfuse.com) (US region)
-- (Optional) [Ollama](https://ollama.com) on `:11434` — for the `gemma4:12b` model
+- (Optional) [Ollama](https://ollama.com) on `:11434` — for `gemma4:12b` model and local guardrails
 - (Optional) [E2B API key](https://e2b.dev) — for sandboxed code execution
 
 ## Local Development
@@ -181,6 +181,42 @@ Skills are imported as raw text at build time via Wrangler module rules (`"type"
 2. Add a raw import in `skills/discovery.ts`
 3. Add the `{ raw, path }` entry to the `rawSkills` array
 
+## Guardrails — Runtime Safety
+
+Three-tier runtime content safety system implemented as [AI SDK Language Model Middleware](https://ai-sdk.dev/docs/ai-sdk-core/middleware). The middleware wraps the model and intercepts every step in the agentic loop — user messages, tool results, and model output.
+
+### Tiers
+
+| Tier | Engine | When to Use |
+|------|--------|-------------|
+| `simple` | Regex blocklist + [OpenAI Moderation API](https://platform.openai.com/docs/guides/moderation) | Fast, low-cost, good default for production |
+| `local` | [Llama Guard 3](https://ai.meta.com/research/publications/llama-guard-llm-based-input-output-safeguard-for-human-ai-conversations/) via Ollama | Full classification, no external API calls, requires Ollama |
+| `cloud` | Llama Guard 3 8B via [Cloudflare Workers AI](https://developers.cloudflare.com/workers-ai/) | Full classification at the edge, no local GPU needed |
+| `none` | Disabled | No safety checks (default) |
+
+Selected via the `GUARDRAIL_TIER` env var.
+
+### How It Works
+
+**Input checking** (`transformParams`): Before each model call, new messages (user input and tool results) are extracted and classified. If unsafe content is detected, the request is rejected with a descriptive error naming the violated categories.
+
+**Output checking** (`wrapStream`): The model's streaming output is filtered in real-time:
+- **Regex fast-path**: Each text delta is checked against injection/blocklist patterns for instant filtering
+- **Sentence-level buffering**: Text accumulates until a sentence boundary (`.` `!` `?` followed by whitespace, or `\n\n`), then the complete sentence is released — this prevents partial-sentence false positives
+
+### Safety Categories (Llama Guard)
+
+S1: Violent Crimes, S2: Non-Violent Crimes, S3: Sex-Related Crimes, S4: Child Sexual Exploitation, S5: Defamation, S6: Specialized Advice, S7: Privacy, S8: Intellectual Property, S9: Indiscriminate Weapons, S10: Hate, S11: Suicide & Self-Harm, S12: Sexual Content, S13: Elections
+
+### Simple Tier Details
+
+The `simple` tier combines two checks:
+
+1. **Regex patterns** — prompt injection attempts (`ignore previous instructions`, `reveal your system prompt`, `bypass restrictions`, etc.) and harmful content blocklist
+2. **OpenAI Moderation API** — broad content policy classification (hate, violence, self-harm, sexual content, etc.)
+
+Regex runs first (synchronous, zero latency); OpenAI Moderation only fires if regex passes.
+
 ## Bug Reports — Durable Workflow
 
 Paste an error log and ask the assistant to file it as a bug. The `fileBugReport` tool starts a **Cloudflare Workflow**, and a card in the chat follows it:
@@ -281,11 +317,18 @@ packages/backend/
 │   │   ├── raw-loader.ts  # Streamable HTTP MCP client
 │   │   ├── ai-sdk-loader.ts # @ai-sdk/mcp client
 │   │   └── types.ts       # McpToolLoader interface
-│   └── skills/
-│       ├── discovery.ts   # Skill parsing, catalog, prompt builder
-│       ├── load-skill.ts  # loadSkill tool definition
-│       ├── eli5-explainer/SKILL.md
-│       └── senior-architect/SKILL.md
+│   ├── skills/
+│   │   ├── discovery.ts   # Skill parsing, catalog, prompt builder
+│   │   ├── load-skill.ts  # loadSkill tool definition
+│   │   ├── eli5-explainer/SKILL.md
+│   │   └── senior-architect/SKILL.md
+│   └── guardrails/
+│       ├── index.ts       # Tier selection factory
+│       ├── middleware.ts   # LanguageModelMiddleware (input + stream)
+│       ├── checker.ts     # SafetyChecker interface, Llama Guard parser
+│       ├── simple.ts      # Regex + OpenAI Moderation
+│       ├── local.ts       # Llama Guard via Ollama
+│       └── cloud.ts       # Llama Guard via CF Workers AI
 ├── .dev.vars              # Local secrets (gitignored)
 ├── package.json
 ├── tsconfig.json
@@ -314,14 +357,15 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 
 | Variable | Required | Default | Purpose |
 |----------|----------|---------|---------|
-| `OPENAI_API_KEY` | Yes | — | OpenAI model |
+| `OPENAI_API_KEY` | Yes | — | OpenAI model + moderation API (simple guardrail tier) |
 | `AI_GATEWAY_ACCOUNT_ID` | Yes | `wrangler.jsonc` vars | Cloudflare account that owns the AI Gateway |
 | `AI_GATEWAY_NAME` | Yes | `wrangler.jsonc` vars | AI Gateway that OpenAI calls go through |
 | `AI_GATEWAY_TOKEN` | Yes | — | Gateway auth token (`cf-aig-authorization`), a secret |
 | `LANGFUSE_PUBLIC_KEY` | Yes | — | Langfuse telemetry |
 | `LANGFUSE_SECRET_KEY` | Yes | — | Langfuse telemetry |
 | `MCP_IMPL` | No | `raw` | MCP client implementation: `"raw"` or `"ai-sdk"` |
-| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for the gemma4 model |
+| `GUARDRAIL_TIER` | No | `none` | Safety tier: `"simple"`, `"local"`, `"cloud"`, or `"none"` |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for local guardrails and gemma4 model |
 | `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
 | `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
 
@@ -351,6 +395,8 @@ streamText({
 | Two disconnected traces per request | Workers native tracing enabled | Remove `[observability.traces]` from `wrangler.jsonc` |
 | Build error: cannot resolve OTel packages | Missing direct dependencies | Run `pnpm --filter backend add @opentelemetry/resources @opentelemetry/core` |
 | MCP server "X" unavailable | Server down or timed out (5s) | Check the server URL in `mcp/config.ts`; set `enabled: false` to skip |
+| `Content blocked by guardrails: ...` | Input classified as unsafe | Expected behavior — review the flagged categories in the error message |
+| Guardrails not running | `GUARDRAIL_TIER` not set | Defaults to `"none"` — set to `"simple"`, `"local"`, or `"cloud"` in `.dev.vars` |
 | `E2B_API_KEY is not set` | Using E2B sandbox without API key | Set `E2B_API_KEY` in `.dev.vars` or switch to stub (`SANDBOX_PROVIDER` unset) |
 | Code execution returns simulated output | Using stub sandbox provider | Set `SANDBOX_PROVIDER=e2b` with a valid `E2B_API_KEY` for real execution |
 | Skills not appearing in model output | Missing import or `rawSkills` entry | Ensure the SKILL.md is imported and added to the array in `skills/discovery.ts` |
