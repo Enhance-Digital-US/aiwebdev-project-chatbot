@@ -66,12 +66,18 @@
     { "name": "bug-report", "binding": "BUG_REPORT", "class_name": "BugReportWorkflow" }
   ],
 
-  // D1: bug-report progress for the workflow card (lesson 16). Apply the schema with
-  //   npx wrangler d1 migrations apply chatbot --local    (and --remote once deployed)
-  // No database_id yet: local dev doesn't need one. Run `npx wrangler d1 create chatbot`
-  // and paste its id here before the first deploy that uses it.
+  // D1: bug-report progress (lesson 16), saved chats and issue-tracker tokens (lesson 19).
+  // Apply the schema with
+  //   npx wrangler d1 migrations apply chatbot --local    (and --remote before deploying)
+  // database_id is this deployment's database, from `npx wrangler d1 create chatbot`.
+  // Deploying to your own account? Create yours and put its id here.
   "d1_databases": [
-    { "binding": "DB", "database_name": "chatbot", "migrations_dir": "migrations" }
+    {
+      "binding": "DB",
+      "database_name": "chatbot",
+      "database_id": "eedfc352-ce3e-4eaf-9bb4-3cecd23af89a",
+      "migrations_dir": "migrations"
+    }
   ],
 
   // Workers AI binding for cloud guardrail tier (Llama Guard)
