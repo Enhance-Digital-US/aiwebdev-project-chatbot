@@ -58,6 +58,19 @@ The lessons say so where the column first appears. The redaction eval case lands
 
 Lessons 13–20 also name an mcp-server tag (`lesson-13` until lesson 16, then `lesson-16`). The chatbot code at each tag must work against that pinned server version. In particular, the chatbot at `lesson-13`–`lesson-15` must not send `external_id`, because the server doesn't accept it before `lesson-16`.
 
+## As built
+
+- **How:** snapshots were stripped backwards from `main` (20 → 03) in a separate worktree, then replayed onto `4d3375d` with `git commit-tree`, reusing each snapshot's tree exactly. Each tag's lockfile was derived from the next one with `pnpm install --lockfile-only`, so dependency versions never drift between tags.
+- **Generated files:** the backend README, `.dev.vars.example` and `wrangler.jsonc` were rendered per lesson from one annotated source each; the lesson-20 render is byte-identical to `main`.
+- **Checks per tag:** frozen install, `pnpm typecheck`, build, backend tests; a marker table (25 features) present exactly from its lesson on; no unreachable frontend files or unimported dependencies; no `gemma4` in a production build.
+- **Boundary decisions:**
+  - Access identity (`auth/access.ts`, `jose`), the custom domain and the deploy scripts arrive at 19, per the feature map. Before 19 the middleware sets `userId` to `null`, so lesson 11's traces carry sessions but not users until 19.
+  - `ISSUE_TRACKER_URL` and `getMcpServers(env)` arrive with MCP at 13, not with the workflow at 16 as in `main`'s history.
+  - The Team Assistant persona text (and the empty-state copy from 10) lists all four abilities from 09, as written in history; prompt versions are `@1` at 09–12, `@2` at 13–17, `@3` at 18 and `@4` at 19.
+  - Lesson 04's chat page (plain list and form) and lesson 03's scaffold page are new code; `main` never had them. Lesson 05 brings in AI Elements.
+  - Lesson 07's model picker offers one model (GPT-6 Luna); Ollama joins at 08.
+  - `pnpm-workspace.yaml` is the same on every tag (build permissions for packages a tag may not install are harmless).
+
 ## Risks / Trade-offs
 
 - [The rebuild is long, manual work] → do it in groups of lessons, with CI over every tag as the safety net.

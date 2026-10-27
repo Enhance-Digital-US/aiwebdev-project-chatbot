@@ -1,0 +1,78 @@
+name: Lesson tags
+
+# Checks the course checkpoints: the `lesson-NN` tags on the `course` branch that
+# each build lesson starts from and ends at. Every tag must install from its own
+# lockfile, typecheck, build and pass its tests, and must never track a
+# .dev.vars file. This file lives on main only: it isn't part of any lesson, so
+# the lesson-20 = main comparison excludes it (course-checkpoint-history design §2).
+#
+# Pushing a tag checks that tag. Run the workflow manually to check them all.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["lesson-*"]
+
+jobs:
+  list:
+    runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.tags.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # lesson-00 is the empty root commit: nothing to install or build.
+      - id: tags
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = push ]; then
+            tags="$GITHUB_REF_NAME"
+          else
+            tags=$(git tag -l 'lesson-*')
+          fi
+          echo "tags=$(printf '%s\n' $tags | grep -vx 'lesson-00' | jq -R . | jq -sc .)" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: list
+    if: needs.list.outputs.tags != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJson(needs.list.outputs.tags) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.tag }}
+
+      - name: No tracked .dev.vars
+        run: |
+          if git ls-files | grep -E '(^|/)\.dev\.vars$'; then
+            echo "::error::${{ matrix.tag }} tracks a .dev.vars file"
+            exit 1
+          fi
+
+      - uses: pnpm/action-setup@v4  # version from the tag's package.json "packageManager"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      # Backend dry-run bundles ../frontend/dist as static assets, so build frontend first
+      - name: Build
+        run: pnpm run build
+
+      # Backend tests arrive with the model registry (lesson 07).
+      - name: Backend tests
+        run: |
+          if grep -q '"test"' packages/backend/package.json; then
+            pnpm --filter backend test
+          fi
