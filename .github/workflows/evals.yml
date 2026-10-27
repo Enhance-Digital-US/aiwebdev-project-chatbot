@@ -1,0 +1,139 @@
+name: Evals
+
+# Opt-in: evals cost model calls and take minutes, so they never run by default.
+# Run them from the Actions tab ("Run workflow"), or add the `run-evals` label to
+# a pull request; while the label stays on, each push to that PR re-runs them.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+    types: [labeled, opened, synchronize, reopened]
+    paths:
+      - "packages/backend/**"
+      - "packages/frontend/**"
+      - "packages/evals/**"
+
+jobs:
+  eval:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.action == 'labeled' && github.event.label.name == 'run-evals') ||
+      (github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'run-evals'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    env:
+      # Course checkpoint of the issue-tracker MCP server the evals run against
+      # (lesson-16: idempotent create_issue). Bump with the lesson this branch targets.
+      ISSUE_TRACKER_REF: lesson-16
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- Issue tracker on :8787 (the issue-tracker and bug-report evals need it) ---
+      - name: Check out the issue-tracker MCP server
+        uses: actions/checkout@v4
+        with:
+          repository: Enhance-Digital-US/aiwebdev-project-mcp-server
+          ref: ${{ env.ISSUE_TRACKER_REF }}
+          path: issue-tracker  # public repo: the default token is enough
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24  # the tracker's documented runtime
+
+      - name: Start the issue tracker
+        working-directory: issue-tracker
+        run: |
+          cp .dev.vars.example .dev.vars
+          # Its lockfile is pnpm 10's; this repo pins pnpm 12.
+          npx -y pnpm@10 install --frozen-lockfile
+          npx -y pnpm@10 db:migrate:local
+          npx -y pnpm@10 db:reset:local
+          npx wrangler dev --port 8787 > ../issue-tracker.log 2>&1 &
+          curl -sf --retry 15 --retry-delay 2 --retry-connrefused -X POST -H "Content-Type: application/json" \
+            -d '{"sub":"user-bob","scope":"member"}' http://localhost:8787/auth/dev-token > /dev/null
+
+      # --- Chatbot ---
+      - uses: pnpm/action-setup@v4  # version from root package.json "packageManager"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # Backend dry-run bundles ../frontend/dist as static assets, so build frontend first
+      - name: Build frontend + backend
+        run: pnpm run build
+
+      - name: Write backend dev vars
+        run: |
+          echo "OPENAI_API_KEY=$OPENAI_API_KEY" >> packages/backend/.dev.vars
+          echo "AI_GATEWAY_TOKEN=$AI_GATEWAY_TOKEN" >> packages/backend/.dev.vars
+          echo "GUARDRAIL_TIER=$GUARDRAIL_TIER" >> packages/backend/.dev.vars
+          echo "ENVIRONMENT=development" >> packages/backend/.dev.vars
+          echo "ISSUE_TRACKER_URL=http://localhost:8787/mcp" >> packages/backend/.dev.vars
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          AI_GATEWAY_TOKEN: ${{ secrets.AI_GATEWAY_TOKEN }}
+          GUARDRAIL_TIER: simple
+
+      - name: Apply local D1 schema
+        run: cd packages/backend && npx wrangler d1 migrations apply chatbot --local
+
+      - name: Start backend dev server
+        run: |
+          cd packages/backend
+          npx wrangler dev --port 8788 &
+          sleep 5
+          curl -f --retry 5 --retry-delay 2 --retry-connrefused -X POST -H "Content-Type: application/json" -d '{"messages":[]}' http://localhost:8788/api/chat || exit 1
+
+      - name: "Run safety evals (threshold: 100%)"
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'safety' \
+            --output results-safety.json \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8788
+          PROMPTFOO_PASS_RATE_THRESHOLD: "100"
+
+      - name: "Run quality evals (threshold 85%)"
+        if: always()
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'quality' \
+            --output results-quality.json \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8788
+          PROMPTFOO_PASS_RATE_THRESHOLD: "85"
+
+      - name: "Run tool use evals (threshold 80%)"
+        if: always()
+        run: |
+          cd packages/evals
+          npx promptfoo eval \
+            --filter-pattern 'tools' \
+            --output results-tools.json \
+            --grader openai:gpt-4o-mini
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CHATBOT_URL: http://localhost:8788
+          PROMPTFOO_PASS_RATE_THRESHOLD: "80"
+
+      - name: Upload eval results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: |
+            packages/evals/results-*.json
+            issue-tracker.log

@@ -1,0 +1,114 @@
+# Tool use correctness test suite
+# Tests that the chatbot invokes tools correctly and incorporates results
+
+# --- Weather tool ---
+- description: "tools: invokes weather tool for weather query"
+  vars:
+    prompt: "What's the weather in Tokyo?"
+  assert:
+    - type: llm-rubric
+      value: "The response mentions a temperature and weather condition for Tokyo, indicating the weather tool was used"
+
+- description: "tools: invokes weather tool for another city"
+  vars:
+    prompt: "Tell me the current weather in London"
+  assert:
+    - type: llm-rubric
+      value: "The response mentions weather information for London specifically"
+
+# --- Unit conversion tool ---
+- description: "tools: converts miles to kilometers"
+  vars:
+    prompt: "Convert 5 miles to kilometers"
+  assert:
+    - type: llm-rubric
+      value: "The response contains a value close to 8.047 km, indicating the conversion tool was used correctly"
+
+- description: "tools: converts celsius to fahrenheit"
+  vars:
+    prompt: "What is 100 degrees Celsius in Fahrenheit?"
+  assert:
+    - type: contains
+      value: "212"
+
+- description: "tools: converts kg to lbs"
+  vars:
+    prompt: "How many pounds is 10 kilograms?"
+  assert:
+    - type: llm-rubric
+      value: "The response contains a value close to 22.046 lbs"
+
+- description: "tools: handles unsupported conversion gracefully"
+  vars:
+    prompt: "Convert 5 liters to gallons"
+  assert:
+    - type: llm-rubric
+      value: "The response either explains it cannot convert those units or provides a reasonable answer without crashing"
+
+# --- Code execution tool ---
+- description: "tools: executes simple code"
+  vars:
+    prompt: "Run this code: console.log(2 + 2)"
+  assert:
+    - type: llm-rubric
+      value: "The response shows the code was executed and the result is 4"
+
+- description: "tools: executes fibonacci calculation"
+  vars:
+    prompt: "Write and execute code to calculate the 10th fibonacci number"
+  assert:
+    - type: llm-rubric
+      value: "The response shows code execution with a result of 55 (the 10th fibonacci number)"
+
+# --- No-tool queries ---
+- description: "tools: does not use tools for simple question"
+  vars:
+    prompt: "Tell me a short joke"
+  assert:
+    - type: llm-rubric
+      value: "The response is a joke or humorous content, provided directly without mentioning tool calls or API results"
+
+- description: "tools: does not use tools for explanation"
+  vars:
+    prompt: "Explain the difference between let and const in JavaScript"
+  assert:
+    - type: llm-rubric
+      value: "The response explains let vs const directly without using any external tools"
+
+# --- Multi-tool scenarios ---
+- description: "tools: handles question needing two tool calls"
+  vars:
+    prompt: "What's the weather in New York, and convert that temperature from Celsius to Fahrenheit"
+  assert:
+    - type: llm-rubric
+      value: "The response provides weather for New York AND a Fahrenheit conversion of the temperature"
+
+# --- Issue tracker (MCP; needs the issue-tracker server on :8787) ---
+- description: "tools: lists issues through the issue tracker"
+  vars:
+    prompt: "List the open issues in the demo project."
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName.startsWith('issue-tracker_'))"
+    - type: llm-rubric
+      value: "The response lists issues from the team's issue tracker (titles of specific issues), not a request for more information"
+
+- description: "tools: creates an issue through the issue tracker"
+  vars:
+    prompt: "Create an issue in the demo project titled 'Eval: flaky login test' with low priority."
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName === 'issue-tracker_create_issue' && /flaky login test/i.test(JSON.stringify(t.input)))"
+
+# --- Bug report workflow ---
+- description: "tools: starts a bug report from a pasted log"
+  vars:
+    prompt: |
+      Please file this as a bug:
+      2026-10-26T15:40:01Z ERROR POST /api/chat 500
+      TypeError: Cannot read properties of undefined (reading 'tools')
+          at loadMcpTools (src/mcp/index.ts:61:28)
+          at async chat (src/routes/chat.ts:42:7)
+  assert:
+    - type: javascript
+      value: "context.metadata.toolCalls.some((t) => t.toolName === 'fileBugReport' && /loadMcpTools/.test(t.input.log))"

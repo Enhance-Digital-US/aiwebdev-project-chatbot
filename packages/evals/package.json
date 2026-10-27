@@ -1,0 +1,25 @@
+{
+  "name": "evals",
+  "private": true,
+  "scripts": {
+    "eval": "promptfoo eval --env-file .env",
+    "eval:safety": "promptfoo eval --env-file .env --filter-pattern 'safety'",
+    "eval:quality": "promptfoo eval --env-file .env --filter-pattern 'quality'",
+    "eval:tools": "promptfoo eval --env-file .env --filter-pattern 'tools'",
+    "eval:view": "promptfoo view",
+    "typecheck": "tsc --noEmit",
+    "eval:braintrust": "npx tsx scripts/braintrust-eval.ts",
+    "eval:langfuse": "npx tsx scripts/langfuse-evals.ts"
+  },
+  "dependencies": {
+    "promptfoo": "^0.123.1",
+    "braintrust": "^3.34.0",
+    "autoevals": "^0.0.120",
+    "langfuse": "^3.39.2",
+    "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "tsx": "^4.19.0"
+  }
+}
