@@ -37,11 +37,19 @@ import {
   ModelSelectorName,
   ModelSelectorTrigger,
 } from "@/components/ai-elements/model-selector";
+import type { ToolPart } from "@/components/ai-elements/tool";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { MessageSquareIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Suggestions } from "@/components/ai-elements/suggestions";
 import { useChatTitle } from "@/lib/chat-title";
+import {
+  Tool as ToolDisplay,
+  ToolContent,
+  ToolHeader,
+  ToolInput,
+  ToolOutput,
+} from "@/components/ai-elements/tool";
 
 const models = [
   { id: "gpt-6-luna", name: "GPT-6 Luna", provider: "openai" as const },
@@ -50,6 +58,32 @@ const models = [
     ? [{ id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const }]
     : []),
 ];
+
+function ToolInvocation({ part }: { part: ToolPart }) {
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (part.state === "output-available" || part.state === "output-error") {
+      setOpen(true);
+    }
+  }, [part.state]);
+
+  return (
+    <ToolDisplay open={open} onOpenChange={setOpen}>
+      {part.type === "dynamic-tool" ? (
+        <ToolHeader type={part.type} state={part.state} toolName={part.toolName} />
+      ) : (
+        <ToolHeader type={part.type} state={part.state} />
+      )}
+      <ToolContent>
+        <ToolInput input={part.input} />
+        <ToolOutput
+          output={part.state === "output-available" ? part.output : undefined}
+          errorText={part.state === "output-error" ? part.errorText : undefined}
+        />
+      </ToolContent>
+    </ToolDisplay>
+  );
+}
 
 /** Sent by the backend after each answer (packages/backend/src/structured/followups.ts). */
 type Followups = { suggestions: string[]; title?: string };
@@ -137,6 +171,11 @@ function ChatPage() {
                       if (part.type === "text") {
                         return (
                           <MessageResponse key={i}>{part.text}</MessageResponse>
+                        );
+                      }
+                      if (part.type.startsWith("tool-")) {
+                        return (
+                          <ToolInvocation key={i} part={part as ToolPart} />
                         );
                       }
                       return null;

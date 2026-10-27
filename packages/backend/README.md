@@ -66,8 +66,17 @@ The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models a
 
 | Model ID | Provider | Notes |
 |----------|----------|-------|
-| `gpt-6-luna` | OpenAI | Default; reasoning model (default effort, reasoning not streamed); via AI Gateway |
+| `gpt-6-luna` | OpenAI | Default, supports tools; reasoning model (default effort, reasoning not streamed); via AI Gateway |
 | `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running |
+
+## Local Tools
+
+| Tool | File | Description |
+|------|------|-------------|
+| `getWeather` | `tools/weather.ts` | Weather information lookup |
+| `convertUnits` | `tools/convert-units.ts` | Unit conversion |
+
+Tools are skipped entirely when `supportsTools === false` on the model config (e.g., models that don't support function calling).
 
 ## Project Structure
 
@@ -77,8 +86,12 @@ packages/backend/
 │   ├── index.ts           # Hono app entry point
 │   ├── providers.ts       # Model registry (OpenAI, Ollama)
 │   ├── telemetry.ts       # Langfuse OTLP exporter, flush
-│   └── routes/
-│       └── chat.ts        # POST /api/chat — orchestrates all subsystems
+│   ├── routes/
+│   │   └── chat.ts        # POST /api/chat — orchestrates all subsystems
+│   └── tools/
+│       ├── index.ts       # Local tool registry
+│       ├── weather.ts     # getWeather tool
+│       └── convert-units.ts # convertUnits tool
 ├── .dev.vars              # Local secrets (gitignored)
 ├── package.json
 ├── tsconfig.json

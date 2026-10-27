@@ -3,11 +3,13 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   createUIMessageStreamResponse,
+  isStepCount,
   streamText,
   toUIMessageStream,
 } from "ai";
 import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
+import { tools } from "../tools";
 import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
 import { flushTelemetry } from "../telemetry";
 import { generateFollowups, isFirstExchange } from "../structured/followups";
@@ -20,6 +22,7 @@ chat.post("/chat", async (c) => {
   if (!config) return c.json({ error: `Unknown model: ${modelId}` }, 400);
   const userId = c.get("userId");
   const chatId = typeof rawChatId === "string" && rawChatId.length <= 200 ? rawChatId : undefined;
+  const supportsTools = config.supportsTools !== false;
 
   const model = config.createModel(c.env);
   const modelMessages = await convertToModelMessages(messages);
@@ -29,6 +32,10 @@ chat.post("/chat", async (c) => {
     system: buildSystemPrompt(),
     messages: modelMessages,
     providerOptions: config.providerOptions,
+    ...(supportsTools && {
+      tools,
+      stopWhen: isStepCount(5),
+    }),
     runtimeContext: {
       promptVersion: SYSTEM_PROMPT_VERSION,
       ...(chatId && { sessionId: chatId }),
