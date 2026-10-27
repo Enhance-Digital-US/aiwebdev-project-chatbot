@@ -30,7 +30,7 @@ export function createGatewayOpenAI(env: AppEnv["Bindings"]) {
   return createOpenAI(gatewayOpenAIConfig(env));
 }
 
-/** Used when a request names no model. */
+/** Used when a request names no model, and by the bug-report workflow's draft step. */
 export const DEFAULT_MODEL = "gpt-6-luna";
 
 const models: Record<string, ModelConfig> = {

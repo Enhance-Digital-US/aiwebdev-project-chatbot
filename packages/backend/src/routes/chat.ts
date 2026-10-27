@@ -10,7 +10,7 @@ import {
 } from "ai";
 import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
-import { tools, createExecuteCodeTool } from "../tools";
+import { tools, createExecuteCodeTool, createFileBugReportTool, issueTrackerLoaded } from "../tools";
 import { loadMcpTools } from "../mcp";
 import type { McpElicitation } from "../mcp/types";
 import { loadSkill } from "../skills";
@@ -57,7 +57,14 @@ chat.post("/chat", async (c) => {
     messages: modelMessages,
     providerOptions: config.providerOptions,
     ...(supportsTools && {
-      tools: { ...tools, ...mcpTools, loadSkill, executeCode: createExecuteCodeTool(c.env) },
+      tools: {
+        ...tools,
+        ...mcpTools,
+        loadSkill,
+        executeCode: createExecuteCodeTool(c.env),
+        // Only when the tracker's tools loaded: without them the run fails at dedupe.
+        ...(issueTrackerLoaded(mcpTools) && { fileBugReport: createFileBugReportTool(c.env, { userId, chatId }) }),
+      },
       stopWhen: isStepCount(5),
     }),
     runtimeContext: {
