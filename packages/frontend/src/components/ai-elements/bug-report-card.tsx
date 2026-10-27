@@ -42,36 +42,6 @@ function failedStep(status: Status): string | undefined {
   return STEPS.find((s) => s.key === status.step)?.label;
 }
 
-// Pending runs survive a refresh here until chats are persisted (lesson 19).
-const STORAGE_KEY = "team-assistant:bug-reports";
-
-export function rememberBugReport(id: string) {
-  try {
-    const ids = new Set<string>(JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]"));
-    ids.add(id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...ids]));
-  } catch {
-    // storage unavailable: the card just won't come back after a refresh
-  }
-}
-
-function forgetBugReport(id: string) {
-  try {
-    const ids = (JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]") as string[]).filter((x) => x !== id);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
-  } catch {
-    // ignore
-  }
-}
-
-export function rememberedBugReports(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
-  } catch {
-    return [];
-  }
-}
-
 function useBugReport(id: string) {
   const [status, setStatus] = useState<Status | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -89,19 +59,13 @@ function useBugReport(id: string) {
         setStatus(next);
         setError(null);
         misses = 0;
-        if (next.result || next.status === "errored") {
-          forgetBugReport(id);
-          return;
-        }
+        if (next.result || next.status === "errored") return;
       } catch (e) {
         if (stopped) return;
         const message = (e as Error).message;
         // A brand-new run can briefly 404; say so (and stop) only once it persists.
         if (message !== "Bug report not found") setError(message);
-        else if (++misses >= NOT_FOUND_POLLS) {
-          forgetBugReport(id);
-          return setError(message);
-        }
+        else if (++misses >= NOT_FOUND_POLLS) return setError(message);
       }
       timer = setTimeout(poll, POLL_MS);
     };

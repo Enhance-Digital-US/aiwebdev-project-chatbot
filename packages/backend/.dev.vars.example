@@ -22,10 +22,19 @@ LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
 
 # --- Optional ---------------------------------------------------------------
 
-# `pnpm dev` already passes these two with --var. Set them here too if you run
+# Encrypts stored issue-tracker OAuth tokens (only used with ISSUE_TRACKER_AUTH=oauth,
+# the default when deployed). Generate your own: openssl rand -base64 32
+TOKEN_ENCRYPTION_KEY=
+
+# `pnpm dev` already passes these three with --var. Set them here too if you run
 # `wrangler dev` directly (e.g. in CI).
 ENVIRONMENT=development
 ISSUE_TRACKER_URL=http://localhost:8787/mcp
+APP_URL=http://localhost:5173
+
+# Issue-tracker auth: dev-token (default locally) or oauth (per-user login,
+# the default when deployed; needs TOKEN_ENCRYPTION_KEY)
+# ISSUE_TRACKER_AUTH=oauth
 
 # Issue-tracker persona for local dev tokens (the tracker runs on :8787):
 # user-alice (admin), user-bob (member, default), user-carol (viewer)
@@ -48,3 +57,8 @@ OLLAMA_BASE_URL=http://localhost:11434
 SANDBOX_PROVIDER=
 # Required when SANDBOX_PROVIDER=e2b
 E2B_API_KEY=
+
+# Cloudflare Access (set in wrangler.jsonc vars; leave empty locally, where
+# there is no Access JWT and traces carry no user id)
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=

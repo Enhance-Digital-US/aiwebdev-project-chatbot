@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { generateFollowups, isFirstExchange, parseFollowups } from "./followups";
+import { generateFollowups, isFirstExchange, parseFollowups, wantsTitle } from "./followups";
 import type { LanguageModel } from "ai";
 
 const three = ["Show me an example", "How does caching work?", "What about errors?"];
@@ -82,5 +82,21 @@ describe("generateFollowups", () => {
       ).resolves.toBeNull();
     }
     warn.mockRestore();
+  });
+});
+
+describe("wantsTitle", () => {
+  const first = [{ role: "user" }];
+  const continued = [{ role: "user" }, { role: "assistant" }];
+
+  it("unsaved requests: only the first exchange", () => {
+    expect(wantsTitle(first)).toBe(true);
+    expect(wantsTitle(continued)).toBe(false);
+  });
+
+  it("saved chats: until the chat has a title", () => {
+    // A first answer that paused for a confirmation finishes in a continuation.
+    expect(wantsTitle(continued, false)).toBe(true);
+    expect(wantsTitle(first, true)).toBe(false);
   });
 });

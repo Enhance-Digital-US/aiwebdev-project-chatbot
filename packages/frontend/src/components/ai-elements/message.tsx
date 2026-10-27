@@ -332,6 +332,11 @@ export type MessageResponseProps = ComponentProps<typeof Streamdown>;
 
 const streamdownPlugins = { cjk, code, math, mermaid };
 
+// Links into this app (e.g. the assistant's "Connect issue tracker" link)
+// open without the "external website" warning; others still ask first.
+const isAppPath = (url: string) => url.startsWith("/") && !url.startsWith("//") && !url.startsWith("/\\");
+const linkSafety = { enabled: true, onLinkCheck: isAppPath };
+
 export const MessageResponse = memo(
   ({ className, ...props }: MessageResponseProps) => (
     <Streamdown
@@ -340,6 +345,7 @@ export const MessageResponse = memo(
         className
       )}
       plugins={streamdownPlugins}
+      linkSafety={linkSafety}
       {...props}
     />
   ),
