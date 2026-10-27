@@ -1,6 +1,6 @@
 /**
- * Bump when the persona text changes, so answers can be traced back to the
- * prompt version that produced them.
+ * Bump when the persona text changes, so traces and eval runs can be compared
+ * across prompt versions (it's sent as telemetry metadata).
  */
 export const SYSTEM_PROMPT_VERSION = "team-assistant@1";
 

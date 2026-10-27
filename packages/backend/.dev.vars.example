@@ -16,7 +16,14 @@ AI_GATEWAY_TOKEN=your-ai-gateway-token
 # AI_GATEWAY_ACCOUNT_ID=your-cloudflare-account-id
 # AI_GATEWAY_NAME=your-gateway-name
 
+# Langfuse tracing (https://langfuse.com → project settings → API keys)
+LANGFUSE_PUBLIC_KEY=pk-lf-your-public-key
+LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
+
 # --- Optional ---------------------------------------------------------------
+
+# Langfuse region host (default: https://us.cloud.langfuse.com)
+LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 
 # Ollama URL for the gemma4:12b model
 OLLAMA_BASE_URL=http://localhost:11434

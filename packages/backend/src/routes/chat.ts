@@ -8,15 +8,18 @@ import {
 } from "ai";
 import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
-import { buildSystemPrompt } from "../prompts/system";
+import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
+import { flushTelemetry } from "../telemetry";
 import { generateFollowups, isFirstExchange } from "../structured/followups";
 
 const chat = new Hono<AppEnv>();
 
 chat.post("/chat", async (c) => {
-  const { messages, model: modelId = DEFAULT_MODEL } = await c.req.json();
+  const { messages, model: modelId = DEFAULT_MODEL, id: rawChatId } = await c.req.json();
   const config = getModel(modelId);
   if (!config) return c.json({ error: `Unknown model: ${modelId}` }, 400);
+  const userId = c.get("userId");
+  const chatId = typeof rawChatId === "string" && rawChatId.length <= 200 ? rawChatId : undefined;
 
   const model = config.createModel(c.env);
   const modelMessages = await convertToModelMessages(messages);
@@ -26,6 +29,18 @@ chat.post("/chat", async (c) => {
     system: buildSystemPrompt(),
     messages: modelMessages,
     providerOptions: config.providerOptions,
+    runtimeContext: {
+      promptVersion: SYSTEM_PROMPT_VERSION,
+      ...(chatId && { sessionId: chatId }),
+      ...(userId && { userId }),
+    },
+    telemetry: {
+      functionId: config.telemetryId,
+      includeRuntimeContext: { sessionId: true, userId: true, promptVersion: true },
+    },
+    onEnd() {
+      c.executionCtx.waitUntil(flushTelemetry());
+    },
   });
 
   const stream = createUIMessageStream({

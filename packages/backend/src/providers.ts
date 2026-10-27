@@ -7,6 +7,7 @@ export type ModelConfig = {
   createModel: (env: AppEnv["Bindings"]) => LanguageModel;
   providerOptions?: Parameters<typeof streamText>[0]["providerOptions"];
   sendReasoning?: boolean;
+  telemetryId: string;
 };
 
 /**
@@ -36,6 +37,7 @@ const models: Record<string, ModelConfig> = {
     // A reasoning model (default effort: medium). Its reasoning isn't streamed
     // to the UI.
     createModel: (env) => createGatewayOpenAI(env)("gpt-6-luna"),
+    telemetryId: "openai-chat",
   },
   "gemma4:12b": {
     // Local-only: needs a reachable Ollama server (not available when deployed)
@@ -45,6 +47,7 @@ const models: Record<string, ModelConfig> = {
       })("gemma4:12b"),
     providerOptions: { ollama: { think: true } },
     sendReasoning: true,
+    telemetryId: "ollama-chat",
   },
 };
 
