@@ -69,12 +69,13 @@ Lessons 13–20 also name an mcp-server tag (`lesson-13` until lesson 16, then `
   - The Team Assistant persona text (and the empty-state copy from 10) lists all four abilities from 09, as written in history; prompt versions are `@1` at 09–12, `@2` at 13–17, `@3` at 18 and `@4` at 19.
   - Lesson 04's chat page (plain list and form) and lesson 03's scaffold page are new code; `main` never had them. Lesson 05 brings in AI Elements.
   - Lesson 07's model picker offers one model (GPT-6 Luna); Ollama joins at 08.
+  - The deployed D1 `database_id` arrives at 19, the first deploy; lesson 16 binds the database without one (local dev needs none).
   - `pnpm-workspace.yaml` is the same on every tag (build permissions for packages a tag may not install are harmless).
 
 ## Risks / Trade-offs
 
 - [The rebuild is long, manual work] → do it in groups of lessons, with CI over every tag as the safety net.
-- [Someone pushes to `course` by hand, so a tag no longer matches its lesson] → tags are immutable once published. Fixes go in as `lesson-NN.1` follow-up tags, and the lesson frontmatter is updated to match.
+- [A tag needs a fix after publishing] → until a lesson's content is finalized, its tag (and every later tag, plus `course`) is rebuilt in place and force-pushed. Once the lesson is locked, tags are immutable: fixes go in as `lesson-NN.1` follow-up tags, and the lesson frontmatter is updated to match.
 - [An early tag accidentally contains a secret] → the same `.dev.vars` checks as `main` run over every tag in CI.
 
 ## Migration Plan
