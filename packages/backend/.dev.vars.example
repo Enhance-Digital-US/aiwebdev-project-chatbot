@@ -6,7 +6,7 @@
 
 # --- Required ---------------------------------------------------------------
 
-# OpenAI: the chat model
+# OpenAI: chat model + the Moderation API used by the "simple" guardrail tier
 OPENAI_API_KEY=sk-your-openai-key
 
 # Cloudflare AI Gateway: every OpenAI call goes through it. Account id and
@@ -37,7 +37,11 @@ LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
 # MCP client implementation: "raw" (default) or "ai-sdk"
 MCP_IMPL=raw
 
-# Ollama URL for the gemma4:12b model
+# Guardrail tier: simple | local | cloud | none
+# "local" needs Ollama running with llama-guard3
+GUARDRAIL_TIER=simple
+
+# Ollama URL for the gemma4:12b model and the "local" guardrail tier
 OLLAMA_BASE_URL=http://localhost:11434
 
 # Code execution sandbox: "e2b", "cloudflare", or empty for the stub

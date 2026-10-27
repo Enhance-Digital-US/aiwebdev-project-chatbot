@@ -6,6 +6,7 @@ import {
   isStepCount,
   streamText,
   toUIMessageStream,
+  wrapLanguageModel,
   type ToolSet,
 } from "ai";
 import type { AppEnv } from "../types";
@@ -16,6 +17,7 @@ import type { McpElicitation } from "../mcp/types";
 import { loadSkill } from "../skills";
 import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
 import { flushTelemetry } from "../telemetry";
+import { createGuardrails } from "../guardrails";
 import { generateFollowups, isFirstExchange } from "../structured/followups";
 
 const chat = new Hono<AppEnv>();
@@ -48,11 +50,22 @@ chat.post("/chat", async (c) => {
     }
   }
 
-  const model = config.createModel(c.env);
+  const baseModel = config.createModel(c.env);
+  // Each call gets its own guardrail instance: the middleware tracks which
+  // messages it has already checked.
+  const guarded = () => {
+    const guardrails = createGuardrails(c.env);
+    return guardrails
+      ? wrapLanguageModel({
+          model: baseModel as Parameters<typeof wrapLanguageModel>[0]["model"],
+          middleware: guardrails,
+        })
+      : baseModel;
+  };
   const modelMessages = await convertToModelMessages(messages);
 
   const result = streamText({
-    model,
+    model: guarded(),
     system: buildSystemPrompt(),
     messages: modelMessages,
     providerOptions: config.providerOptions,
@@ -109,7 +122,7 @@ chat.post("/chat", async (c) => {
       }
       const withTitle = isFirstExchange(messages);
       const followups = await generateFollowups({
-        model,
+        model: guarded(),
         messages: [...modelMessages, ...answer],
         withTitle,
       });

@@ -24,7 +24,9 @@ export type AppEnv = {
     E2B_API_KEY?: string;
     /** Cloudflare Sandbox DO binding — required when SANDBOX_PROVIDER=cloudflare */
     SANDBOX?: DurableObjectNamespace<Sandbox>;
-    /** Ollama base URL for the gemma4:12b model (default: http://localhost:11434) */
+    /** Guardrail tier: "simple" (regex+OpenAI), "local" (Ollama Llama Guard), "cloud" (CF Workers AI), "none" */
+    GUARDRAIL_TIER?: "simple" | "local" | "cloud" | "none";
+    /** Ollama base URL for local guardrails (default: http://localhost:11434) */
     OLLAMA_BASE_URL?: string;
     /** Bug-report workflow (workflows/bug-report.ts) */
     BUG_REPORT: Workflow<BugReportParams>;
@@ -34,6 +36,8 @@ export type AppEnv = {
     BUG_REPORT_APPROVAL_TIMEOUT?: string;
     /** Local fault injection: "fail-after-file" fails the first filing attempt after the issue exists */
     BUG_REPORT_CHAOS?: string;
+    /** CF Workers AI binding — required for cloud guardrail tier */
+    AI: Ai;
     /** Issue-tracker MCP endpoint: the hosted tracker in wrangler.jsonc vars; `pnpm dev` passes localhost:8787 */
     ISSUE_TRACKER_URL?: string;
     /** Issue-tracker persona for local dev tokens: user-alice (admin), user-bob (member, default), user-carol (viewer) */
