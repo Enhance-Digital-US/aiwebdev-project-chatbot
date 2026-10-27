@@ -7,6 +7,7 @@ import {
 } from "ai";
 import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
+import { buildSystemPrompt } from "../prompts/system";
 
 const chat = new Hono<AppEnv>();
 
@@ -19,7 +20,7 @@ chat.post("/chat", async (c) => {
 
   const result = streamText({
     model,
-    system: "You are a helpful assistant.",
+    system: buildSystemPrompt(),
     messages: await convertToModelMessages(messages),
     providerOptions: config.providerOptions,
   });
