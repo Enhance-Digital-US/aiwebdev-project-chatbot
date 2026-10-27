@@ -13,6 +13,7 @@ import { DEFAULT_MODEL, getModel } from "../providers";
 import { tools } from "../tools";
 import { loadMcpTools } from "../mcp";
 import type { McpElicitation } from "../mcp/types";
+import { loadSkill } from "../skills";
 import { buildSystemPrompt, SYSTEM_PROMPT_VERSION } from "../prompts/system";
 import { flushTelemetry } from "../telemetry";
 import { generateFollowups, isFirstExchange } from "../structured/followups";
@@ -56,7 +57,7 @@ chat.post("/chat", async (c) => {
     messages: modelMessages,
     providerOptions: config.providerOptions,
     ...(supportsTools && {
-      tools: { ...tools, ...mcpTools },
+      tools: { ...tools, ...mcpTools, loadSkill },
       stopWhen: isStepCount(5),
     }),
     runtimeContext: {
