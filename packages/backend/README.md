@@ -10,6 +10,7 @@ Hono + Cloudflare Workers backend with AI SDK v7. The sections below cover what 
 - An [OpenAI API key](https://platform.openai.com/api-keys)
 - A [Langfuse account](https://cloud.langfuse.com) (US region)
 - (Optional) [Ollama](https://ollama.com) on `:11434` — for the `gemma4:12b` model
+- (Optional) [E2B API key](https://e2b.dev) — for sandboxed code execution
 
 ## Local Development
 
@@ -178,12 +179,34 @@ Skills are imported as raw text at build time via Wrangler module rules (`"type"
 2. Add a raw import in `skills/discovery.ts`
 3. Add the `{ raw, path }` entry to the `rawSkills` array
 
-## Local Tools
+## Sandbox Code Execution
+
+The `executeCode` tool lets the model run user code in a secure, isolated sandbox. Supports Python and JavaScript.
+
+### Providers
+
+| Provider | Env Value | Description |
+|----------|-----------|-------------|
+| [E2B](https://e2b.dev) | `e2b` | Cloud sandboxes with 30s creation timeout, 15s execution timeout |
+| [Cloudflare Sandbox](https://developers.cloudflare.com/sandbox/) | `cloudflare` | Durable Object-based sandboxes at the edge |
+| Stub | _(default)_ | Simulated output for development — no real execution |
+
+Selected via the `SANDBOX_PROVIDER` env var. E2B requires `E2B_API_KEY`. Cloudflare requires a `SANDBOX` Durable Object binding in `wrangler.jsonc`.
+
+### How It Works
+
+1. The model decides code execution is needed (e.g., math computation, data analysis, code testing)
+2. It calls `executeCode({ code: "...", language: "python" })`
+3. The tool creates a sandbox, writes the code to a file, executes it, and returns `{ stdout, stderr, exitCode }`
+4. The sandbox is destroyed after execution
+
+### Local Tools Summary
 
 | Tool | File | Description |
 |------|------|-------------|
 | `getWeather` | `tools/weather.ts` | Weather information lookup |
 | `convertUnits` | `tools/convert-units.ts` | Unit conversion |
+| `executeCode` | `tools/execute-code.ts` | Sandboxed code execution (Python/JavaScript) |
 | `loadSkill` | `skills/load-skill.ts` | Load behavioral skill instructions |
 
 MCP remote tools are merged alongside these. Tools are skipped entirely when `supportsTools === false` on the model config (e.g., models that don't support function calling).
@@ -201,7 +224,8 @@ packages/backend/
 │   ├── tools/
 │   │   ├── index.ts       # Local tool registry
 │   │   ├── weather.ts     # getWeather tool
-│   │   └── convert-units.ts # convertUnits tool
+│   │   ├── convert-units.ts # convertUnits tool
+│   │   └── execute-code.ts  # executeCode tool (E2B / CF Sandbox / stub)
 │   ├── mcp/
 │   │   ├── config.ts      # MCP server list
 │   │   ├── index.ts       # loadMcpTools orchestrator
@@ -249,6 +273,8 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 | `LANGFUSE_SECRET_KEY` | Yes | — | Langfuse telemetry |
 | `MCP_IMPL` | No | `raw` | MCP client implementation: `"raw"` or `"ai-sdk"` |
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for the gemma4 model |
+| `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
+| `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
 
 ## Disabling Prompt/Completion Logging
 
@@ -276,4 +302,6 @@ streamText({
 | Two disconnected traces per request | Workers native tracing enabled | Remove `[observability.traces]` from `wrangler.jsonc` |
 | Build error: cannot resolve OTel packages | Missing direct dependencies | Run `pnpm --filter backend add @opentelemetry/resources @opentelemetry/core` |
 | MCP server "X" unavailable | Server down or timed out (5s) | Check the server URL in `mcp/config.ts`; set `enabled: false` to skip |
+| `E2B_API_KEY is not set` | Using E2B sandbox without API key | Set `E2B_API_KEY` in `.dev.vars` or switch to stub (`SANDBOX_PROVIDER` unset) |
+| Code execution returns simulated output | Using stub sandbox provider | Set `SANDBOX_PROVIDER=e2b` with a valid `E2B_API_KEY` for real execution |
 | Skills not appearing in model output | Missing import or `rawSkills` entry | Ensure the SKILL.md is imported and added to the array in `skills/discovery.ts` |

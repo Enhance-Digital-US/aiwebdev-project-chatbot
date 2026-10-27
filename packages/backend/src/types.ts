@@ -1,3 +1,5 @@
+import type { Sandbox } from "@cloudflare/sandbox";
+
 export type AppEnv = {
   Bindings: {
     OPENAI_API_KEY: string;
@@ -15,6 +17,12 @@ export type AppEnv = {
     LANGFUSE_BASE_URL?: string;
     /** MCP client implementation: "raw" (default, Workers-compatible) or "ai-sdk" (Node only) */
     MCP_IMPL?: "raw" | "ai-sdk";
+    /** Sandbox provider: "e2b", "cloudflare", or omit for stub */
+    SANDBOX_PROVIDER?: "e2b" | "cloudflare";
+    /** E2B API key — required when SANDBOX_PROVIDER=e2b */
+    E2B_API_KEY?: string;
+    /** Cloudflare Sandbox DO binding — required when SANDBOX_PROVIDER=cloudflare */
+    SANDBOX?: DurableObjectNamespace<Sandbox>;
     /** Ollama base URL for the gemma4:12b model (default: http://localhost:11434) */
     OLLAMA_BASE_URL?: string;
     /** Issue-tracker MCP endpoint: the hosted tracker in wrangler.jsonc vars; `pnpm dev` passes localhost:8787 */

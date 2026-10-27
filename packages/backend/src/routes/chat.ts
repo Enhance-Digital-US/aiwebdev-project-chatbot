@@ -10,7 +10,7 @@ import {
 } from "ai";
 import type { AppEnv } from "../types";
 import { DEFAULT_MODEL, getModel } from "../providers";
-import { tools } from "../tools";
+import { tools, createExecuteCodeTool } from "../tools";
 import { loadMcpTools } from "../mcp";
 import type { McpElicitation } from "../mcp/types";
 import { loadSkill } from "../skills";
@@ -57,7 +57,7 @@ chat.post("/chat", async (c) => {
     messages: modelMessages,
     providerOptions: config.providerOptions,
     ...(supportsTools && {
-      tools: { ...tools, ...mcpTools, loadSkill },
+      tools: { ...tools, ...mcpTools, loadSkill, executeCode: createExecuteCodeTool(c.env) },
       stopWhen: isStepCount(5),
     }),
     runtimeContext: {

@@ -34,7 +34,10 @@
     // The gateway is authenticated: set the AI_GATEWAY_TOKEN secret.
     "AI_GATEWAY_ACCOUNT_ID": "9dff37a609d16c31de78f32f94783041",
     "AI_GATEWAY_NAME": "default",
-    "MCP_IMPL": "raw"
+    "MCP_IMPL": "raw",
+    // Set to "e2b" or "cloudflare" to enable real sandbox execution (default: stub)
+    // "e2b" requires the E2B_API_KEY secret.
+    "SANDBOX_PROVIDER": "e2b"
   },
 
   "observability": {
