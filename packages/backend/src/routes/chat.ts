@@ -5,17 +5,20 @@ import {
   streamText,
   toUIMessageStream,
 } from "ai";
-import { createOpenAI } from "@ai-sdk/openai";
 import type { AppEnv } from "../types";
+import { DEFAULT_MODEL, getModel } from "../providers";
 
 const chat = new Hono<AppEnv>();
 
 chat.post("/chat", async (c) => {
-  const { messages } = await c.req.json();
-  const openai = createOpenAI({ apiKey: c.env.OPENAI_API_KEY });
+  const { messages, model: modelId = DEFAULT_MODEL } = await c.req.json();
+  const config = getModel(modelId);
+  if (!config) return c.json({ error: `Unknown model: ${modelId}` }, 400);
+
+  const model = config.createModel(c.env);
 
   const result = streamText({
-    model: openai("gpt-6-luna"),
+    model,
     system: "You are a helpful assistant.",
     messages: await convertToModelMessages(messages),
   });

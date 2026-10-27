@@ -20,9 +20,25 @@ import {
   PromptInputProvider,
   PromptInputSubmit,
   PromptInputTextarea,
+  PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import {
+  ModelSelector,
+  ModelSelectorContent,
+  ModelSelectorGroup,
+  ModelSelectorItem,
+  ModelSelectorList,
+  ModelSelectorLogo,
+  ModelSelectorName,
+  ModelSelectorTrigger,
+} from "@/components/ai-elements/model-selector";
 import { MessageScrollerItem } from "@/components/ui/message-scroller";
 import { MessageSquareIcon } from "lucide-react";
+import { useState } from "react";
+
+const models = [
+  { id: "gpt-6-luna", name: "GPT-6 Luna", provider: "openai" as const },
+];
 
 // Same origin: Vite proxies /api to the backend in dev, so no CORS setup or
 
@@ -34,10 +50,13 @@ export const Route = createFileRoute("/")({
 });
 
 function ChatPage() {
+  const [model, setModel] = useState(models[0].id);
   const { messages, sendMessage, status } = useChat({ transport });
 
+  const selectedModel = models.find((m) => m.id === model) ?? models[0];
+
   const handleSubmit = (message: { text: string }) => {
-    sendMessage({ text: message.text });
+    sendMessage({ text: message.text }, { body: { model } });
   };
 
   return (
@@ -87,6 +106,31 @@ function ChatPage() {
             <PromptInputTextarea placeholder="Type a message..." />
           </PromptInputBody>
           <PromptInputFooter>
+            <PromptInputTools>
+              <ModelSelector>
+                <ModelSelectorTrigger>
+                  <button
+                    type="button"
+                    className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+                  >
+                    <ModelSelectorLogo provider={selectedModel.provider} />
+                    <span>{selectedModel.name}</span>
+                  </button>
+                </ModelSelectorTrigger>
+                <ModelSelectorContent>
+                  <ModelSelectorGroup heading="Models">
+                    <ModelSelectorList value={model} onValueChange={setModel}>
+                      {models.map((m) => (
+                        <ModelSelectorItem key={m.id} value={m.id}>
+                          <ModelSelectorLogo provider={m.provider} />
+                          <ModelSelectorName>{m.name}</ModelSelectorName>
+                        </ModelSelectorItem>
+                      ))}
+                    </ModelSelectorList>
+                  </ModelSelectorGroup>
+                </ModelSelectorContent>
+              </ModelSelector>
+            </PromptInputTools>
             <PromptInputSubmit status={status} />
           </PromptInputFooter>
         </PromptInput>
