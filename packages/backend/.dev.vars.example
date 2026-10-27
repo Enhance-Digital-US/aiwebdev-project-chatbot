@@ -4,4 +4,7 @@
 # Values here override `vars` in wrangler.jsonc. In production, set secrets
 # with `wrangler secret put <NAME>` instead.
 
-# The scaffold reads no variables yet.
+# --- Required ---------------------------------------------------------------
+
+# OpenAI: the chat model
+OPENAI_API_KEY=sk-your-openai-key

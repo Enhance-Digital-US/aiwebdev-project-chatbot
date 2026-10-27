@@ -7,7 +7,10 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "hono": "^4.12.31"
+    "@ai-sdk/openai": "^4.0.102",
+    "ai": "^7.0.153",
+    "hono": "^4.12.31",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^5.20260721.1",
