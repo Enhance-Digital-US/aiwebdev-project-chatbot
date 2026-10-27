@@ -39,3 +39,8 @@ MCP_IMPL=raw
 
 # Ollama URL for the gemma4:12b model
 OLLAMA_BASE_URL=http://localhost:11434
+
+# Code execution sandbox: "e2b", "cloudflare", or empty for the stub
+SANDBOX_PROVIDER=
+# Required when SANDBOX_PROVIDER=e2b
+E2B_API_KEY=
