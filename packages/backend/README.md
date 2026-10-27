@@ -138,12 +138,53 @@ Add an entry to the `mcpServers` array in `mcp/config.ts`:
 }
 ```
 
+## Skills — On-Demand Behavioral Instructions
+
+Skills are behavioral instruction sets (following the [agentskills.io](https://agentskills.io) spec) that the model loads on demand via a `loadSkill` tool call. They modify how the model responds without changing the underlying model or system prompt permanently.
+
+### How It Works
+
+1. The system prompt includes a **skill catalog** listing available skills and their descriptions
+2. When a user's request matches a skill, the model calls `loadSkill({ name: "skill-name" })`
+3. The tool returns the skill's markdown instructions, which the model follows for subsequent responses
+
+### Available Skills
+
+| Skill | Description |
+|-------|-------------|
+| `eli5-explainer` | Explains concepts using simple everyday analogies, short sentences, and no unexplained jargon |
+| `senior-architect` | Responds as a production-focused architect — leads with trade-offs, considers failure modes, references industry patterns |
+
+### Skill Format
+
+Each skill is a `SKILL.md` file with YAML frontmatter:
+
+```markdown
+---
+name: my-skill
+description: One-line description the model uses to decide when to load this skill.
+---
+
+# Instructions
+
+Markdown body with behavioral instructions...
+```
+
+Skills are imported as raw text at build time via Wrangler module rules (`"type": "Text"` for `**/*.md`).
+
+### Adding a Skill
+
+1. Create `skills/<name>/SKILL.md` with frontmatter and instructions
+2. Add a raw import in `skills/discovery.ts`
+3. Add the `{ raw, path }` entry to the `rawSkills` array
+
 ## Local Tools
 
 | Tool | File | Description |
 |------|------|-------------|
 | `getWeather` | `tools/weather.ts` | Weather information lookup |
 | `convertUnits` | `tools/convert-units.ts` | Unit conversion |
+| `loadSkill` | `skills/load-skill.ts` | Load behavioral skill instructions |
 
 MCP remote tools are merged alongside these. Tools are skipped entirely when `supportsTools === false` on the model config (e.g., models that don't support function calling).
 
@@ -161,12 +202,17 @@ packages/backend/
 │   │   ├── index.ts       # Local tool registry
 │   │   ├── weather.ts     # getWeather tool
 │   │   └── convert-units.ts # convertUnits tool
-│   └── mcp/
-│       ├── config.ts      # MCP server list
-│       ├── index.ts       # loadMcpTools orchestrator
-│       ├── raw-loader.ts  # Streamable HTTP MCP client
-│       ├── ai-sdk-loader.ts # @ai-sdk/mcp client
-│       └── types.ts       # McpToolLoader interface
+│   ├── mcp/
+│   │   ├── config.ts      # MCP server list
+│   │   ├── index.ts       # loadMcpTools orchestrator
+│   │   ├── raw-loader.ts  # Streamable HTTP MCP client
+│   │   ├── ai-sdk-loader.ts # @ai-sdk/mcp client
+│   │   └── types.ts       # McpToolLoader interface
+│   └── skills/
+│       ├── discovery.ts   # Skill parsing, catalog, prompt builder
+│       ├── load-skill.ts  # loadSkill tool definition
+│       ├── eli5-explainer/SKILL.md
+│       └── senior-architect/SKILL.md
 ├── .dev.vars              # Local secrets (gitignored)
 ├── package.json
 ├── tsconfig.json
@@ -230,3 +276,4 @@ streamText({
 | Two disconnected traces per request | Workers native tracing enabled | Remove `[observability.traces]` from `wrangler.jsonc` |
 | Build error: cannot resolve OTel packages | Missing direct dependencies | Run `pnpm --filter backend add @opentelemetry/resources @opentelemetry/core` |
 | MCP server "X" unavailable | Server down or timed out (5s) | Check the server URL in `mcp/config.ts`; set `enabled: false` to skip |
+| Skills not appearing in model output | Missing import or `rawSkills` entry | Ensure the SKILL.md is imported and added to the array in `skills/discovery.ts` |
