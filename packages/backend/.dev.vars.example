@@ -1,0 +1,7 @@
+# Local secrets and overrides for `wrangler dev`.
+# Copy to .dev.vars (gitignored) and fill in your own values:
+#   cp .dev.vars.example .dev.vars
+# Values here override `vars` in wrangler.jsonc. In production, set secrets
+# with `wrangler secret put <NAME>` instead.
+
+# The scaffold reads no variables yet.

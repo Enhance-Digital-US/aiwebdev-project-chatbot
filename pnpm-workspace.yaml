@@ -1,0 +1,15 @@
+packages:
+  - "packages/*"
+allowBuilds:
+  '@playwright/browser-chromium': false
+  '@swc/core': false
+  braintrust: false
+  esbuild: true
+  onnxruntime-node: false
+  protobufjs: false
+  sharp: true
+  workerd: true
+minimumReleaseAgeExclude:
+  - '@ai-sdk/mcp@2.0.80'
+  - '@ai-sdk/provider-utils@5.0.64'
+  - '@ai-sdk/provider@4.0.31'

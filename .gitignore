@@ -1,0 +1,45 @@
+node_modules
+dist
+.wrangler
+.dev.vars
+*.local
+*.tsbuildinfo
+.agents/
+.claude/
+skills-lock.json
+.env
+
+# Tooling / agent session state
+.superpowers/
+
+# Test & coverage output
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Build & dev caches
+.cache/
+.turbo/
+.vite/
+.eslintcache
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor & OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Wrangler bulk-secret input files (contain real secret values)
+secrets.json
+
+# Playwright MCP snapshots/console logs
+.playwright-mcp/

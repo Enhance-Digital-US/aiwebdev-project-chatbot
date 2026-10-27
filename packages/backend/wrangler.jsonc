@@ -1,0 +1,28 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "chatbot",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-21",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // 8787 is left free for the course's issue-tracker MCP server. The Vite proxy
+  // points here.
+  "dev": {
+    "port": 8788
+  },
+
+  // Single-Worker deployment: the Vite build is served as static assets and
+  // only /api/* reaches the Hono app. Everything else falls back to index.html
+  // so TanStack Router can handle client-side routes.
+  // Build the frontend first (`pnpm build` at the root does this).
+  "assets": {
+    "directory": "../frontend/dist",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
