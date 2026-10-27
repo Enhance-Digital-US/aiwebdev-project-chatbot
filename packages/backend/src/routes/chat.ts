@@ -21,10 +21,14 @@ chat.post("/chat", async (c) => {
     model,
     system: "You are a helpful assistant.",
     messages: await convertToModelMessages(messages),
+    providerOptions: config.providerOptions,
   });
 
   return createUIMessageStreamResponse({
-    stream: toUIMessageStream({ stream: result.stream }),
+    stream: toUIMessageStream({
+      stream: result.stream,
+      sendReasoning: config.sendReasoning,
+    }),
   });
 });
 

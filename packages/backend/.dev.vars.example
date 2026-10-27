@@ -15,3 +15,8 @@ OPENAI_API_KEY=sk-your-openai-key
 AI_GATEWAY_TOKEN=your-ai-gateway-token
 # AI_GATEWAY_ACCOUNT_ID=your-cloudflare-account-id
 # AI_GATEWAY_NAME=your-gateway-name
+
+# --- Optional ---------------------------------------------------------------
+
+# Ollama URL for the gemma4:12b model
+OLLAMA_BASE_URL=http://localhost:11434

@@ -8,6 +8,7 @@ Hono + Cloudflare Workers backend with AI SDK v7. The sections below cover what 
 - [pnpm](https://pnpm.io/)
 - A [Cloudflare account](https://dash.cloudflare.com/sign-up)
 - An [OpenAI API key](https://platform.openai.com/api-keys)
+- (Optional) [Ollama](https://ollama.com) on `:11434` — for the `gemma4:12b` model
 
 ## Local Development
 
@@ -58,6 +59,7 @@ The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models a
 | Model ID | Provider | Notes |
 |----------|----------|-------|
 | `gpt-6-luna` | OpenAI | Default; reasoning model (default effort, reasoning not streamed); via AI Gateway |
+| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running |
 
 ## Project Structure
 
@@ -65,7 +67,7 @@ The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models a
 packages/backend/
 ├── src/
 │   ├── index.ts           # Hono app entry point
-│   ├── providers.ts       # Model registry (OpenAI)
+│   ├── providers.ts       # Model registry (OpenAI, Ollama)
 │   └── routes/
 │       └── chat.ts        # POST /api/chat — orchestrates all subsystems
 ├── .dev.vars              # Local secrets (gitignored)
@@ -82,3 +84,4 @@ packages/backend/
 | `AI_GATEWAY_ACCOUNT_ID` | Yes | `wrangler.jsonc` vars | Cloudflare account that owns the AI Gateway |
 | `AI_GATEWAY_NAME` | Yes | `wrangler.jsonc` vars | AI Gateway that OpenAI calls go through |
 | `AI_GATEWAY_TOKEN` | Yes | — | Gateway auth token (`cf-aig-authorization`), a secret |
+| `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for the gemma4 model |

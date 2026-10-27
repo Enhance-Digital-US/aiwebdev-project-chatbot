@@ -1,9 +1,12 @@
-import type { LanguageModel } from "ai";
+import type { LanguageModel, streamText } from "ai";
 import { createOpenAI } from "@ai-sdk/openai";
+import { createOllama } from "ollama-ai-provider-v2";
 import type { AppEnv } from "./types";
 
 export type ModelConfig = {
   createModel: (env: AppEnv["Bindings"]) => LanguageModel;
+  providerOptions?: Parameters<typeof streamText>[0]["providerOptions"];
+  sendReasoning?: boolean;
 };
 
 /**
@@ -33,6 +36,15 @@ const models: Record<string, ModelConfig> = {
     // A reasoning model (default effort: medium). Its reasoning isn't streamed
     // to the UI.
     createModel: (env) => createGatewayOpenAI(env)("gpt-6-luna"),
+  },
+  "gemma4:12b": {
+    // Local-only: needs a reachable Ollama server (not available when deployed)
+    createModel: (env) =>
+      createOllama({
+        baseURL: `${env.OLLAMA_BASE_URL ?? "http://localhost:11434"}/api`,
+      })("gemma4:12b"),
+    providerOptions: { ollama: { think: true } },
+    sendReasoning: true,
   },
 };
 

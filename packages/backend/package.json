@@ -11,6 +11,7 @@
     "@ai-sdk/openai": "^4.0.102",
     "ai": "^7.0.153",
     "hono": "^4.12.31",
+    "ollama-ai-provider-v2": "^4.1.0",
     "zod": "^4.6.5"
   },
   "devDependencies": {

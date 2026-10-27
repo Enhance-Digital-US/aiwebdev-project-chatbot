@@ -14,6 +14,11 @@ import {
   MessageResponse,
 } from "@/components/ai-elements/message";
 import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
+import {
   PromptInput,
   PromptInputBody,
   PromptInputFooter,
@@ -38,6 +43,10 @@ import { useState } from "react";
 
 const models = [
   { id: "gpt-6-luna", name: "GPT-6 Luna", provider: "openai" as const },
+  // Ollama runs on localhost — only offer it in dev builds
+  ...(import.meta.env.DEV
+    ? [{ id: "gemma4:12b", name: "Gemma 4 12B", provider: "google" as const }]
+    : []),
 ];
 
 // Same origin: Vite proxies /api to the backend in dev, so no CORS setup or
@@ -81,6 +90,17 @@ function ChatPage() {
                 <Message from={message.role}>
                   <MessageContent>
                     {message.parts.map((part, i) => {
+                      if (part.type === "reasoning") {
+                        return (
+                          <Reasoning
+                            key={i}
+                            isStreaming={part.state === "streaming"}
+                          >
+                            <ReasoningTrigger />
+                            <ReasoningContent>{part.text}</ReasoningContent>
+                          </Reasoning>
+                        );
+                      }
                       if (part.type === "text") {
                         return (
                           <MessageResponse key={i}>{part.text}</MessageResponse>

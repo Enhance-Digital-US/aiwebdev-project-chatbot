@@ -12,8 +12,8 @@ const env = {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("model registry", () => {
-  it("lists the OpenAI model", () => {
-    expect(availableModels).toEqual(["gpt-6-luna"]);
+  it("lists the OpenAI and Ollama models", () => {
+    expect(availableModels).toEqual(["gpt-6-luna", "gemma4:12b"]);
     expect(getModel(DEFAULT_MODEL)).toBeDefined();
   });
 
