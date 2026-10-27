@@ -36,6 +36,8 @@ export type AppEnv = {
     BUG_REPORT_APPROVAL_TIMEOUT?: string;
     /** Local fault injection: "fail-after-file" fails the first filing attempt after the issue exists */
     BUG_REPORT_CHAOS?: string;
+    /** Token budget per conversation (wrangler.jsonc vars); unset or 0 means no cap */
+    CHAT_TOKEN_CAP?: string | number;
     /** CF Workers AI binding — required for cloud guardrail tier */
     AI: Ai;
     /** Issue-tracker MCP endpoint: the hosted tracker in wrangler.jsonc vars; `pnpm dev` passes localhost:8787 */

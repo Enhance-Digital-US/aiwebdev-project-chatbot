@@ -174,7 +174,7 @@ The `gemma4:12b` (Ollama) model is hidden from the production UI and is unreacha
 
 | Route | Method | Description |
 |-------|--------|-------------|
-| `POST /api/chat` | POST | Accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. With an `id`, the chat is saved under it (the caller's own only; 404 otherwise) |
+| `POST /api/chat` | POST | Accepts `{ id?, messages, model? }`, streams back via AI SDK UIMessageStream. With an `id`, the chat is saved under it (the caller's own only; 404 otherwise, 429 at the token cap) |
 | `GET /api/chats` | GET | The caller's titled chats, most recent first (history sidebar) |
 | `GET /api/chats/:id` | GET | One chat with its messages; 404 for a missing chat or another user's |
 | `GET /api/workflows/:id` | GET | A bug-report run's status, current step, draft, duplicates and result |
@@ -188,12 +188,18 @@ The `model` field defaults to `gpt-6-luna` (`DEFAULT_MODEL`). Available models a
 
 | Model ID | Provider | Notes |
 |----------|----------|-------|
-| `gpt-6-luna` | OpenAI | Default, supports tools; reasoning model (default effort, reasoning not streamed); via AI Gateway |
-| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running |
+| `gpt-6-luna` | OpenAI | Default, supports tools; reasoning model (default effort, reasoning not streamed); via AI Gateway, priced, cacheable |
+| `gemma4:12b` | Ollama (local) | Reasoning enabled, requires Ollama running; no price (cost shows as unknown) |
 
-## Saved Chats
+## Saved Chats and Usage
 
-Conversations are saved in D1 (`chats`, `messages`; `migrations/0002_chats.sql`), keyed by the `useChat` id and owned by the Access user (one `local` user in development). The chat route saves when its stream ends, follow-ups included. The frontend gives each chat a URL (`/c/<id>`) and lists titled chats in a sidebar.
+Conversations are saved in D1 (`chats`, `messages`; `migrations/0002_chats.sql`), keyed by the `useChat` id and owned by the Access user (one `local` user in development). The chat route saves when its stream ends, follow-ups and usage included. The frontend gives each chat a URL (`/c/<id>`) and lists titled chats in a sidebar.
+
+Every answer carries its usage as message metadata: input, cached input, output and reasoning tokens, plus an estimated cost. This covers every model call behind the answer (agent steps plus the follow-ups call), so it lines up with the chat's calls in the AI Gateway logs. The gateway also logs calls that aren't part of a message: guardrail moderation, and the bug-report workflow's draft call. The header shows the conversation's running total.
+
+- **Prices:** come from `price` on each model in `providers.ts` (USD per 1M tokens). A model without one has an unknown cost.
+- **Token cap:** `CHAT_TOKEN_CAP` (`wrangler.jsonc` vars, 200,000) bounds each conversation. At the cap, the route answers 429 before any model call. To try it: `--var CHAT_TOKEN_CAP:3000`.
+- **Caching:** Gateway-routed calls are sent with `cf-aig-cache-ttl: 3600`, so an identical request (same conversation, prompt and tools) is served from AI Gateway's cache. A hit replays the original usage, so `usage.ts` reads the `cf-aig-cache-status: HIT` header: that call counts as all cached input and costs $0. OpenAI's own prompt caching (long shared prefixes) shows up as cached input at the cached rate.
 
 ## MCP — Remote Tool Federation
 
@@ -508,6 +514,7 @@ streamText() → @ai-sdk/otel → BasicTracerProvider → SimpleSpanProcessor
 | `OLLAMA_BASE_URL` | No | `http://localhost:11434` | Ollama URL for local guardrails and gemma4 model |
 | `SANDBOX_PROVIDER` | No | stub | Code execution sandbox: `"e2b"`, `"cloudflare"`, or omit for stub |
 | `E2B_API_KEY` | No | — | Required when `SANDBOX_PROVIDER=e2b` |
+| `CHAT_TOKEN_CAP` | No | `wrangler.jsonc` vars (200000) | Token budget per conversation; unset or 0 means no cap |
 | `ISSUE_TRACKER_AUTH` | No | `oauth`; `dev-token` in development | How issue-tracker calls authenticate |
 | `TOKEN_ENCRYPTION_KEY` | With OAuth | — | 32 random bytes, base64 (`openssl rand -base64 32`); encrypts stored issue-tracker tokens. A secret |
 | `APP_URL` | With OAuth | `wrangler.jsonc` vars; `pnpm dev` passes `http://localhost:5173` | Public origin for the OAuth callback and client metadata URLs |

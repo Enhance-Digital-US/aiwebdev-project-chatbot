@@ -24,12 +24,22 @@ import { flushTelemetry } from "../telemetry";
 import { createGuardrails } from "../guardrails";
 import { generateFollowups, wantsTitle } from "../structured/followups";
 import { chatOwner, claimChat, saveChat } from "../chats/store";
+import { addUsage, messageUsage, tokenCount, type MessageUsage, type ModelCall } from "../usage";
 
 const chat = new Hono<AppEnv>();
 
+/** Assistant message metadata (the frontend's cost meter reads it). */
+export type ChatMetadata = { usage: MessageUsage };
+
+export const BUDGET_MESSAGE =
+  "This conversation has used its token budget. Start a new conversation to keep going.";
+
+/** Seconds AI Gateway may serve a repeated request from its cache (design §10). */
+const GATEWAY_CACHE_TTL = "3600";
+
 chat.post("/chat", async (c) => {
   const { messages, model: modelId = DEFAULT_MODEL, id: rawChatId } = (await c.req.json()) as {
-    messages: UIMessage[];
+    messages: UIMessage<ChatMetadata>[];
     model?: string;
     id?: unknown;
   };
@@ -40,14 +50,16 @@ chat.post("/chat", async (c) => {
   const supportsTools = config.supportsTools !== false;
 
   // Requests with a chat id are saved to it (design §8); ones without (evals,
-  // smoke tests) aren't. Ownership is checked before any tool or model is
-  // touched.
+  // smoke tests) aren't. Ownership and the token cap are checked before any
+  // tool or model is touched.
   const owner = chatOwner(userId, c.env.ENVIRONMENT === "development");
   const saveTo = chatId && owner ? chatId : undefined;
   let chatTitled: boolean | undefined;
   if (saveTo) {
     const claim = await claimChat(c.env.DB, saveTo, owner!);
     if (!claim.owned) return c.json({ error: "Chat not found" }, 404);
+    const cap = Number(c.env.CHAT_TOKEN_CAP);
+    if (cap > 0 && claim.tokenTotal >= cap) return c.json({ error: BUDGET_MESSAGE }, 429);
     chatTitled = claim.titled;
   }
 
@@ -91,12 +103,16 @@ chat.post("/chat", async (c) => {
       : baseModel;
   };
   const modelMessages = await convertToModelMessages(messages);
+  // Repeats of an identical request (same conversation, prompt and tools) are
+  // answered from the gateway's cache.
+  const headers = config.gateway ? { "cf-aig-cache-ttl": GATEWAY_CACHE_TTL } : undefined;
 
   const result = streamText({
     model: guarded(),
     system: buildSystemPrompt({ issueTrackerConnectUrl: connectUrl }),
     messages: modelMessages,
     providerOptions: config.providerOptions,
+    headers,
     ...(supportsTools && {
       tools: {
         ...tools,
@@ -122,9 +138,12 @@ chat.post("/chat", async (c) => {
     },
   });
 
-  const stream = createUIMessageStream({
+  // Usage of this request; the save adds it to the chat's token total.
+  let requestUsage: MessageUsage | undefined;
+
+  const stream = createUIMessageStream<UIMessage<ChatMetadata>>({
     // With the original messages, onEnd gets the whole conversation, follow-ups
-    // included, under the message id the client keeps.
+    // and metadata included, under the message id the client keeps.
     originalMessages: messages,
     onEnd: async ({ messages: conversation, responseMessage }) => {
       if (!saveTo) return;
@@ -135,6 +154,7 @@ chat.post("/chat", async (c) => {
         await saveChat(c.env.DB, saveTo, {
           messages: conversation,
           title: followups?.data.title,
+          tokens: requestUsage ? tokenCount(requestUsage) : 0,
         });
       } catch (error) {
         console.error("Saving the chat failed:", error);
@@ -157,12 +177,28 @@ chat.post("/chat", async (c) => {
       // Once the answer is complete, add follow-ups (and a title on the first
       // exchange) to the same assistant message, then finish it.
       const { messages: answer } = await result.response;
+      const calls: ModelCall[] = (await result.steps).map((step) => ({
+        usage: step.usage,
+        headers: step.response.headers,
+      }));
+      // Usage covers every model call behind the message, so it matches the
+      // gateway's logs. A continuation after a confirmation adds to the
+      // paused half's usage rather than replacing it.
+      const sendUsage = () => {
+        requestUsage = messageUsage(calls, config.price);
+        const previous = messages.at(-1)?.role === "assistant" ? messages.at(-1)?.metadata?.usage : undefined;
+        writer.write({
+          type: "message-metadata",
+          messageMetadata: { usage: previous ? addUsage(previous, requestUsage) : requestUsage },
+        });
+      };
       // Paused for a confirmation: the answer isn't finished, so no follow-ups
       // (a chip sent now would orphan the pending tool call).
       const awaitingApproval = answer.some(
         (m) => typeof m.content !== "string" && m.content.some((p) => p.type === "tool-approval-request")
       );
       if (awaitingApproval) {
+        sendUsage();
         writer.write({ type: "finish" });
         return;
       }
@@ -171,8 +207,11 @@ chat.post("/chat", async (c) => {
         model: guarded(),
         messages: [...modelMessages, ...answer],
         withTitle,
+        headers,
+        onCall: (call) => calls.push(call),
       });
       if (followups) writer.write({ type: "data-followups", data: followups });
+      sendUsage();
       writer.write({ type: "finish" });
     },
   });

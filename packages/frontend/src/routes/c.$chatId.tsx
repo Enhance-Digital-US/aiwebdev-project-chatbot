@@ -54,7 +54,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Confirmation } from "@/components/ai-elements/confirmation";
 import { BugReportCard } from "@/components/ai-elements/bug-report-card";
 import { Suggestions } from "@/components/ai-elements/suggestions";
-import { useChatSession } from "@/lib/chat-session";
+import { sumUsage, useChatSession, type MessageUsage } from "@/lib/chat-session";
 import {
   Tool as ToolDisplay,
   ToolContent,
@@ -101,7 +101,9 @@ function ToolInvocation({ part }: { part: ToolPart }) {
 type Followups = { suggestions: string[]; title?: string };
 /** Sent when an MCP server pauses a tool call to ask the user (backend mcp/types.ts). */
 type McpElicitation = { toolCallId: string; server: string; message: string };
-type ChatMessage = UIMessage<unknown, { followups: Followups; "mcp-elicitation": McpElicitation }>;
+/** Assistant message metadata: what the answer used (backend routes/chat.ts). */
+type ChatMetadata = { usage?: MessageUsage };
+type ChatMessage = UIMessage<ChatMetadata, { followups: Followups; "mcp-elicitation": McpElicitation }>;
 
 function followupsOf(message: ChatMessage): Followups | undefined {
   for (const part of message.parts) {
@@ -117,7 +119,7 @@ function elicitationFor(message: ChatMessage, toolCallId: string): McpElicitatio
   return undefined;
 }
 
-/** The backend answers refusals (e.g. someone else's chat id) with `{ error }`; useChat passes the body on as the message. */
+/** The backend answers refusals (e.g. the token budget) with `{ error }`; useChat passes the body on as the message. */
 function errorText(error: Error): string {
   try {
     const { error: message } = JSON.parse(error.message) as { error?: string };
@@ -175,7 +177,7 @@ function ChatPage({ id, initialMessages }: { id: string; initialMessages: ChatMe
     // After the user answers a confirmation card, continue the same answer.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
-  const { setTitle, refreshChats } = useChatSession();
+  const { setTitle, setUsage, refreshChats } = useChatSession();
 
   const selectedModel = models.find((m) => m.id === model) ?? models[0];
 
@@ -196,6 +198,16 @@ function ChatPage({ id, initialMessages }: { id: string; initialMessages: ChatMe
     setTitle(title);
     return () => setTitle(null);
   }, [title, setTitle]);
+
+  // The header's cost meter: every answer's usage so far.
+  const usage = useMemo(
+    () => sumUsage(messages.flatMap((m) => (m.role === "assistant" && m.metadata?.usage ? [m.metadata.usage] : []))),
+    [messages]
+  );
+  useEffect(() => {
+    setUsage(usage);
+    return () => setUsage(null);
+  }, [usage, setUsage]);
 
   // Each finished answer saved the chat (and maybe titled it): refresh the sidebar.
   const answered = useRef(false);

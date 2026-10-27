@@ -6,8 +6,8 @@ import type { AppEnv } from "../types";
 vi.mock("cloudflare:workers", () => ({ WorkflowEntrypoint: class {} }));
 vi.mock("cloudflare:workflows", () => ({ NonRetryableError: class extends Error {} }));
 
-// An in-memory chat table: id → owner.
-const table = vi.hoisted(() => new Map<string, { owner: string }>());
+// An in-memory chat table: id → owner and token total.
+const table = vi.hoisted(() => new Map<string, { owner: string; tokenTotal: number }>());
 const loadMcpTools = vi.hoisted(() => vi.fn());
 vi.mock("../mcp", () => ({ loadMcpTools }));
 // Tools and skills load the sandbox SDK and raw SKILL.md imports, neither of which runs here.
@@ -18,9 +18,9 @@ vi.mock("../chats/store", async (importOriginal) => {
   return {
     ...actual,
     claimChat: async (_db: unknown, id: string, owner: string) => {
-      if (!table.has(id)) table.set(id, { owner });
+      if (!table.has(id)) table.set(id, { owner, tokenTotal: 0 });
       const row = table.get(id)!;
-      return row.owner === owner ? { owned: true, titled: true } : { owned: false };
+      return row.owner === owner ? { owned: true, tokenTotal: row.tokenTotal, titled: true } : { owned: false };
     },
     loadChat: async (_db: unknown, id: string, owner: string) =>
       table.get(id)?.owner === owner ? { id, title: "Saved", messages: [] } : null,
@@ -29,11 +29,11 @@ vi.mock("../chats/store", async (importOriginal) => {
   };
 });
 
-const { default: chatRoutes } = await import("./chat");
+const { default: chatRoutes, BUDGET_MESSAGE } = await import("./chat");
 const { default: chatsRoutes } = await import("./chats");
 const { chatOwner, LOCAL_OWNER } = await import("../chats/store");
 
-function app(caller: string | null, environment: "development" | "production") {
+function app(caller: string | null, environment: "development" | "production", vars: Record<string, unknown> = {}) {
   const hono = new Hono<AppEnv>();
   hono.use("*", async (c, next) => {
     c.set("userId", caller);
@@ -41,7 +41,7 @@ function app(caller: string | null, environment: "development" | "production") {
   });
   hono.route("/api", chatRoutes);
   hono.route("/api", chatsRoutes);
-  const env = { ENVIRONMENT: environment, DB: {} };
+  const env = { ENVIRONMENT: environment, DB: {}, ...vars };
   return {
     get: (path: string) => hono.request(path, {}, env),
     send: (id: string) =>
@@ -65,7 +65,7 @@ describe("chatOwner", () => {
 });
 
 describe("ownership", () => {
-  table.set("bobs-chat", { owner: "bob@example.com" });
+  table.set("bobs-chat", { owner: "bob@example.com", tokenTotal: 0 });
 
   it("refuses to read another user's conversation", async () => {
     expect((await app("bob@example.com", "production").get("/api/chats/bobs-chat")).status).toBe(200);
@@ -83,5 +83,15 @@ describe("ownership", () => {
     expect(res.status).toBe(404);
     expect(loadMcpTools).not.toHaveBeenCalled();
     expect(table.get("bobs-chat")!.owner).toBe("bob@example.com");
+  });
+});
+
+describe("token cap", () => {
+  it("refuses a conversation at its cap without calling a model", async () => {
+    table.set("spent", { owner: LOCAL_OWNER, tokenTotal: 5000 });
+    const res = await app(null, "development", { CHAT_TOKEN_CAP: "5000" }).send("spent");
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: BUDGET_MESSAGE });
+    expect(loadMcpTools).not.toHaveBeenCalled();
   });
 });
