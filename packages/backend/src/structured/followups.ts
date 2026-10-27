@@ -30,6 +30,16 @@ export function isFirstExchange(messages: { role: string }[]): boolean {
   return messages.length === 1 && messages[0].role === "user";
 }
 
+/**
+ * Whether this answer should come with a title. A saved chat asks until it
+ * has one: its first answer may have paused for a confirmation (the
+ * continuation isn't a first exchange) or had its follow-ups dropped. Without
+ * a saved chat, only the first exchange gets one.
+ */
+export function wantsTitle(messages: { role: string }[], chatTitled?: boolean): boolean {
+  return chatTitled === undefined ? isFirstExchange(messages) : !chatTitled;
+}
+
 export async function generateFollowups({
   model,
   messages,

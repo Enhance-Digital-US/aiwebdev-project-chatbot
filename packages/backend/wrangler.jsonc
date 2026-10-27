@@ -5,6 +5,16 @@
   "compatibility_date": "2026-07-21",
   "compatibility_flags": ["nodejs_compat"],
 
+  // Workers Custom Domain: wrangler deploy creates the DNS record and a per-host
+  // certificate (covers this 2-level subdomain; no Advanced Certificate Manager needed).
+  "routes": [
+    { "pattern": "chatbot.course-projects.ai-web.dev", "custom_domain": true }
+  ],
+  // The custom domain is the only public origin (spec D8): Cloudflare Access protects
+  // that hostname, so workers.dev and preview URLs would bypass login.
+  "workers_dev": false,
+  "preview_urls": false,
+
   // 8787 is reserved for the course's issue-tracker MCP server, which rejects any
   // other Host. The Vite proxy and the evals provider point here.
   "dev": {
@@ -19,7 +29,7 @@
     "directory": "../frontend/dist",
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
+    "run_worker_first": ["/api/*", "/oauth/*"]
   },
 
   "vars": {
@@ -27,6 +37,8 @@
     // issue-tracker dev tokens, keys off this, because wrangler dev rewrites the
     // request host to the custom domain.
     "ENVIRONMENT": "production",
+    // Public origin, for the issue-tracker OAuth redirect and client metadata URLs
+    "APP_URL": "https://chatbot.course-projects.ai-web.dev",
     // The course's hosted issue tracker (an Access bypass covers this host).
     // `pnpm dev` points at the local tracker instead (--var).
     "ISSUE_TRACKER_URL": "https://issue-tracker-mcp-production.enhancedigital.workers.dev/mcp",
@@ -39,7 +51,11 @@
     // "e2b" requires the E2B_API_KEY secret.
     "SANDBOX_PROVIDER": "e2b",
     // "local" cannot work when deployed (no Ollama at the edge). .dev.vars overrides this locally.
-    "GUARDRAIL_TIER": "simple"
+    "GUARDRAIL_TIER": "simple",
+    // Cloudflare Access (Clerk as OIDC IdP) enforces login at the edge. These identify
+    // the Access JWT issuer/audience so the Worker can read the user for Langfuse traces.
+    "ACCESS_TEAM_DOMAIN": "https://enhancedigital.cloudflareaccess.com",
+    "ACCESS_AUD": "7348bba1294ed0017d9bcf4366c73a2ddb4402b72c8f4c79b29785e714114137"
   },
 
   // Bug-report workflow (lesson 16): redact → draft → dedupe → approval → file.
@@ -47,12 +63,18 @@
     { "name": "bug-report", "binding": "BUG_REPORT", "class_name": "BugReportWorkflow" }
   ],
 
-  // D1: bug-report progress for the workflow card (lesson 16). Apply the schema with
-  //   npx wrangler d1 migrations apply chatbot --local    (and --remote once deployed)
-  // No database_id yet: local dev doesn't need one. Run `npx wrangler d1 create chatbot`
-  // and paste its id here before the first deploy that uses it.
+  // D1: bug-report progress (lesson 16), saved chats and issue-tracker tokens (lesson 19).
+  // Apply the schema with
+  //   npx wrangler d1 migrations apply chatbot --local    (and --remote before deploying)
+  // database_id is this deployment's database, from `npx wrangler d1 create chatbot`.
+  // Deploying to your own account? Create yours and put its id here.
   "d1_databases": [
-    { "binding": "DB", "database_name": "chatbot", "migrations_dir": "migrations" }
+    {
+      "binding": "DB",
+      "database_name": "chatbot",
+      "database_id": "eedfc352-ce3e-4eaf-9bb4-3cecd23af89a",
+      "migrations_dir": "migrations"
+    }
   ],
 
   // Workers AI binding for cloud guardrail tier (Llama Guard)
@@ -71,4 +93,8 @@
       "fallthrough": true
     }
   ]
+
+  // Secrets (set with `wrangler secret put <NAME>`, never commit):
+  //   OPENAI_API_KEY, AI_GATEWAY_TOKEN, LANGFUSE_PUBLIC_KEY, LANGFUSE_SECRET_KEY,
+  //   E2B_API_KEY
 }

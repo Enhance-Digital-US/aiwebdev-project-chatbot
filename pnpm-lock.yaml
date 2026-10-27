@@ -212,6 +212,9 @@ importers:
       hono:
         specifier: ^4.12.31
         version: 4.12.31
+      jose:
+        specifier: ^6.2.12
+        version: 6.2.12
       ollama-ai-provider-v2:
         specifier: ^4.1.0
         version: 4.1.0(ai@7.0.153(zod@4.6.5))(zod@4.6.5)
