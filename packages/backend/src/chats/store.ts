@@ -23,17 +23,17 @@ export async function claimChat(
   db: D1Database,
   id: string,
   owner: string
-): Promise<{ owned: false } | { owned: true; titled: boolean }> {
+): Promise<{ owned: false } | { owned: true; tokenTotal: number; titled: boolean }> {
   await db
     .prepare("INSERT OR IGNORE INTO chats (id, user_id, updated_at) VALUES (?, ?, ?)")
     .bind(id, owner, Date.now())
     .run();
   const row = await db
-    .prepare("SELECT user_id, title FROM chats WHERE id = ?")
+    .prepare("SELECT user_id, token_total, title FROM chats WHERE id = ?")
     .bind(id)
-    .first<{ user_id: string; title: string | null }>();
+    .first<{ user_id: string; token_total: number; title: string | null }>();
   return row?.user_id === owner
-    ? { owned: true, titled: row.title !== null }
+    ? { owned: true, tokenTotal: row.token_total, titled: row.title !== null }
     : { owned: false };
 }
 
@@ -56,13 +56,14 @@ export async function loadChat(
 }
 
 /**
- * Stores the conversation as it stands after a response. Rewrites every
- * message: a continuation (after a confirmation) changes the last one in place.
+ * Stores the conversation as it stands after a response, and adds the tokens
+ * the response used. Rewrites every message: a continuation (after a
+ * confirmation) changes the last one in place.
  */
 export async function saveChat(
   db: D1Database,
   id: string,
-  { messages, title }: { messages: UIMessage[]; title?: string }
+  { messages, title, tokens }: { messages: UIMessage[]; title?: string; tokens: number }
 ): Promise<void> {
   await db.batch([
     ...messages.map((message, seq) =>
@@ -76,8 +77,10 @@ export async function saveChat(
     db.prepare("DELETE FROM messages WHERE chat_id = ? AND seq >= ?").bind(id, messages.length),
     // The first title wins: later answers never rename the chat.
     db
-      .prepare("UPDATE chats SET title = COALESCE(title, ?), updated_at = ? WHERE id = ?")
-      .bind(title ?? null, Date.now(), id),
+      .prepare(
+        "UPDATE chats SET title = COALESCE(title, ?), token_total = token_total + ?, updated_at = ? WHERE id = ?"
+      )
+      .bind(title ?? null, tokens, Date.now(), id),
   ]);
 }
 
