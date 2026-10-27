@@ -6,7 +6,7 @@
   "compatibility_flags": ["nodejs_compat"],
 
   // 8787 is reserved for the course's issue-tracker MCP server, which rejects any
-  // other Host. The Vite proxy points here.
+  // other Host. The Vite proxy and the evals provider point here.
   "dev": {
     "port": 8788
   },
