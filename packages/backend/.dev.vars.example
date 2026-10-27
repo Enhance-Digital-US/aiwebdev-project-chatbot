@@ -22,8 +22,20 @@ LANGFUSE_SECRET_KEY=sk-lf-your-secret-key
 
 # --- Optional ---------------------------------------------------------------
 
+# `pnpm dev` already passes these two with --var. Set them here too if you run
+# `wrangler dev` directly (e.g. in CI).
+ENVIRONMENT=development
+ISSUE_TRACKER_URL=http://localhost:8787/mcp
+
+# Issue-tracker persona for local dev tokens (the tracker runs on :8787):
+# user-alice (admin), user-bob (member, default), user-carol (viewer)
+ISSUE_TRACKER_PERSONA=user-bob
+
 # Langfuse region host (default: https://us.cloud.langfuse.com)
 LANGFUSE_BASE_URL=https://us.cloud.langfuse.com
+
+# MCP client implementation: "raw" (default) or "ai-sdk"
+MCP_IMPL=raw
 
 # Ollama URL for the gemma4:12b model
 OLLAMA_BASE_URL=http://localhost:11434

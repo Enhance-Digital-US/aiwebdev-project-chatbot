@@ -2,12 +2,13 @@
   "name": "backend",
   "private": true,
   "scripts": {
-    "dev": "mkdir -p ../frontend/dist && wrangler dev",
+    "dev": "mkdir -p ../frontend/dist && wrangler dev --var ENVIRONMENT:development --var ISSUE_TRACKER_URL:http://localhost:8787/mcp",
     "build": "wrangler deploy --dry-run --outdir dist",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@ai-sdk/mcp": "^2.0.84",
     "@ai-sdk/openai": "^4.0.102",
     "@ai-sdk/otel": "^1.0.153",
     "@opentelemetry/api": "^1.9.1",

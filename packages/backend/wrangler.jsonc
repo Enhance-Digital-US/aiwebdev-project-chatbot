@@ -5,8 +5,8 @@
   "compatibility_date": "2026-07-21",
   "compatibility_flags": ["nodejs_compat"],
 
-  // 8787 is left free for the course's issue-tracker MCP server. The Vite proxy
-  // points here.
+  // 8787 is reserved for the course's issue-tracker MCP server, which rejects any
+  // other Host. The Vite proxy points here.
   "dev": {
     "port": 8788
   },
@@ -23,10 +23,18 @@
   },
 
   "vars": {
+    // Overridden to "development" by `pnpm dev` (--var). Dev-only behavior, such as
+    // issue-tracker dev tokens, keys off this, because wrangler dev rewrites the
+    // request host to the custom domain.
+    "ENVIRONMENT": "production",
+    // The course's hosted issue tracker (an Access bypass covers this host).
+    // `pnpm dev` points at the local tracker instead (--var).
+    "ISSUE_TRACKER_URL": "https://issue-tracker-mcp-production.enhancedigital.workers.dev/mcp",
     // Cloudflare AI Gateway that every hosted model call goes through.
     // The gateway is authenticated: set the AI_GATEWAY_TOKEN secret.
     "AI_GATEWAY_ACCOUNT_ID": "9dff37a609d16c31de78f32f94783041",
-    "AI_GATEWAY_NAME": "default"
+    "AI_GATEWAY_NAME": "default",
+    "MCP_IMPL": "raw"
   },
 
   "observability": {
