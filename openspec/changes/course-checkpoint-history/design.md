@@ -32,7 +32,13 @@ Each lesson commit is built by taking the final versions of that lesson's files 
 git diff --stat lesson-20 main -- . ':!openspec' ':!AGENTS.md'
 ```
 
-It must print nothing. `.github/` CI *is* part of the tags, from lesson 18 (Evals), where the eval gate is taught.
+It must print nothing. `.github/` CI *is* part of the tags, from lesson 18 (Evals), where the eval gate is taught. The one exception is the tag-check workflow (task 6.2, `.github/workflows/lesson-tags.yml`): it checks the tags themselves, so it lives on `main` only and is excluded from the comparison too:
+
+```bash
+git diff --stat lesson-20 main -- . ':!openspec' ':!AGENTS.md' ':!.github/workflows/lesson-tags.yml'
+```
+
+The READMEs are part of the tags and are trimmed per lesson, so a tag never documents code it doesn't have. `.dev.vars.example` lists only what that tag reads.
 
 *Alternative:* evolve `AGENTS.md` per lesson. Rejected: it doubles the authoring work for a file learners don't read in the lessons.
 
@@ -40,7 +46,15 @@ It must print nothing. `.github/` CI *is* part of the tags, from lesson 18 (Eval
 
 Learners clone the default branch (`main`) and run `git checkout lesson-NN`; the tag carries them onto `course`. Lesson commands therefore never mention the branch.
 
-### 4. Cross-repo pins
+### 4. Migrations are fixed when they first appear
+
+Learners apply migrations by filename, and `lesson-20` must match `main`, so a migration file never changes between tags. Two of them therefore carry a column a later lesson uses:
+- `0001_bug_reports.sql` (lesson 16) already has `bug_reports.chat_id`, which links a run to its chat from lesson 19.
+- `0002_chats.sql` (lesson 19) already has `chats.token_total`, which the token cap uses from lesson 20.
+
+The lessons say so where the column first appears. The redaction eval case lands at lesson 18 with the suites, not at 17 with the guardrails.
+
+### 5. Cross-repo pins
 
 Lessons 13–20 also name an mcp-server tag (`lesson-13` until lesson 16, then `lesson-16`). The chatbot code at each tag must work against that pinned server version. In particular, the chatbot at `lesson-13`–`lesson-15` must not send `external_id`, because the server doesn't accept it before `lesson-16`.
 

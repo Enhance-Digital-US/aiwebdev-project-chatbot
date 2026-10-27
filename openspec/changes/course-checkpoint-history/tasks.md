@@ -2,7 +2,7 @@
 
 ## 1. Preconditions
 
-- [ ] 1.1 Confirm `course-build-along-features` is complete on `main`, and mcp-server tags `lesson-13` and `lesson-16` exist on its remote; verify with `openspec list` here and `git ls-remote --tags` on the mcp-server remote
+- [x] 1.1 Confirm `course-build-along-features` is complete on `main`, and mcp-server tags `lesson-13` and `lesson-16` exist on its remote; verify with `openspec list` here and `git ls-remote --tags` on the mcp-server remote
 
 ## 2. Early lessons
 
