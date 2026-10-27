@@ -24,5 +24,5 @@
 
 ## 6. Publish and guard
 
-- [ ] 6.1 Push `course` and all tags; verify `git ls-remote --tags origin` lists `lesson-00`, `03`–`05` and `07`–`20`
+- [x] 6.1 Push `course` and all tags; verify `git ls-remote --tags origin` lists `lesson-00`, `03`–`05` and `07`–`20`
 - [ ] 6.2 Add a CI workflow that checks out every `lesson-*` tag and runs install, typecheck and build, plus the `.dev.vars` tracked-file check; verify it passes for all tags
