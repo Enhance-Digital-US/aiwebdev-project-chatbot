@@ -19,7 +19,7 @@ The backend SHALL read MCP servers from a static list in code, each with a name,
 
 #### Scenario: Issue tracker when deployed
 - **WHEN** the backend runs in production
-- **THEN** the `issue-tracker` entry points at the hosted tracker, `https://issue-tracker-mcp-production.enhancedigital.workers.dev/mcp`, set per environment as `ISSUE_TRACKER_URL`
+- **THEN** the `issue-tracker` entry points at the hosted tracker, `https://issue-tracker.course-projects.ai-web.dev/mcp`, set per environment as `ISSUE_TRACKER_URL`
 
 ### Requirement: Namespaced remote tools
 Every remote tool SHALL be exposed to the model as `${serverName}_${toolName}` so it cannot collide with local tools or another server's tools. MCP tools SHALL run without a user approval step.
