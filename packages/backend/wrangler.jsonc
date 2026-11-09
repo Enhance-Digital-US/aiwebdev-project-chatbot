@@ -39,8 +39,8 @@
     "ENVIRONMENT": "production",
     // Public origin, for the issue-tracker OAuth redirect and client metadata URLs
     "APP_URL": "https://chatbot.course-projects.ai-web.dev",
-    // The course's hosted issue tracker, on its Custom Domain (its workers.dev URL
-    // is off and answers error 1042). `pnpm dev` points at the local tracker instead (--var).
+    // The course's hosted issue tracker. `pnpm dev` points at the local tracker
+    // instead (--var).
     "ISSUE_TRACKER_URL": "https://issue-tracker.course-projects.ai-web.dev/mcp",
     // Cloudflare AI Gateway that every hosted model call goes through.
     // The gateway is authenticated: set the AI_GATEWAY_TOKEN secret.
