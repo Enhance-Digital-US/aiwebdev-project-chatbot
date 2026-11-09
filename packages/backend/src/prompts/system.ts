@@ -4,7 +4,7 @@ import { buildSkillsPrompt } from "../skills";
  * Bump when the persona text changes, so traces and eval runs can be compared
  * across prompt versions (it's sent as telemetry metadata).
  */
-export const SYSTEM_PROMPT_VERSION = "team-assistant@4";
+export const SYSTEM_PROMPT_VERSION = "team-assistant@5";
 
 const persona = `You are Team Assistant, the AI assistant for a software engineering team.
 
@@ -24,11 +24,17 @@ const decodedContentRule = `If asked to decode, translate, or interpret encoded 
 const issueTrackerNotConnected = (connectUrl: string) =>
   `The issue tracker isn't connected for this user yet, so its tools and bug reports are unavailable. If they ask for anything that needs it (issues, projects, filing a bug report), tell them to connect it first with this link, then ask again: [Connect issue tracker](${connectUrl})`;
 
-export function buildSystemPrompt({ issueTrackerConnectUrl }: { issueTrackerConnectUrl?: string } = {}): string {
+const issueTrackerUnreachableRule = `The issue tracker can't be reached right now, so its tools and bug reports are unavailable for this message. If they ask for anything that needs it (issues, projects, filing a bug report), say it's temporarily unavailable and to try again shortly. Never say a bug report was started or filed.`;
+
+export function buildSystemPrompt({
+  issueTrackerConnectUrl,
+  issueTrackerUnreachable,
+}: { issueTrackerConnectUrl?: string; issueTrackerUnreachable?: boolean } = {}): string {
   return [
     persona,
     decodedContentRule,
     issueTrackerConnectUrl && issueTrackerNotConnected(issueTrackerConnectUrl),
+    !issueTrackerConnectUrl && issueTrackerUnreachable && issueTrackerUnreachableRule,
     buildSkillsPrompt(),
   ]
     .filter(Boolean)

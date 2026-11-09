@@ -105,18 +105,23 @@ export class BugReportWorkflow extends WorkflowEntrypoint<Bindings, BugReportPar
       }
     );
 
-    // 3. Possible duplicates, shown on the approval card.
-    await step.do("dedupe", async () => {
-      await recordProgress(db, id, { step: "dedupe" });
-      const candidates: { id: string; title: string; status: string }[] = [];
-      for (const word of [...words(draft.title)].slice(0, 3)) {
-        const text = await issueTracker(this.env, userId, "search_issues", { query: word, project_id: PROJECT_ID });
-        candidates.push(...(JSON.parse(text || "[]") as typeof candidates));
+    // 3. Possible duplicates, shown on the approval card. Short retries, so a
+    //    tracker that's down fails the run in seconds, not minutes.
+    await step.do(
+      "dedupe",
+      { retries: { limit: 2, delay: "2 seconds", backoff: "exponential" } },
+      async () => {
+        await recordProgress(db, id, { step: "dedupe" });
+        const candidates: { id: string; title: string; status: string }[] = [];
+        for (const word of [...words(draft.title)].slice(0, 3)) {
+          const text = await issueTracker(this.env, userId, "search_issues", { query: word, project_id: PROJECT_ID });
+          candidates.push(...(JSON.parse(text || "[]") as typeof candidates));
+        }
+        const dupes = rankDuplicates(draft.title, candidates);
+        await recordProgress(db, id, { dupes });
+        return dupes;
       }
-      const dupes = rankDuplicates(draft.title, candidates);
-      await recordProgress(db, id, { dupes });
-      return dupes;
-    });
+    );
 
     // 4. Durable pause for the user's decision (survives refreshes and deploys).
     await step.do("await approval", async () => {

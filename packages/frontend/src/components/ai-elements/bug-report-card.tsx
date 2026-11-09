@@ -34,6 +34,13 @@ const STEPS = [
 ] as const;
 
 const POLL_MS = 2000;
+/** Consecutive 404s (~10 s) before the card stops polling and says "not found". */
+const NOT_FOUND_POLLS = 5;
+
+/** The label of the step an errored run stopped at (its last recorded step). */
+function failedStep(status: Status): string | undefined {
+  return STEPS.find((s) => s.key === status.step)?.label;
+}
 
 function useBugReport(id: string) {
   const [status, setStatus] = useState<Status | null>(null);
@@ -41,6 +48,7 @@ function useBugReport(id: string) {
 
   useEffect(() => {
     let stopped = false;
+    let misses = 0;
     let timer: ReturnType<typeof setTimeout>;
     const poll = async () => {
       try {
@@ -50,11 +58,14 @@ function useBugReport(id: string) {
         if (stopped) return;
         setStatus(next);
         setError(null);
+        misses = 0;
         if (next.result || next.status === "errored") return;
       } catch (e) {
         if (stopped) return;
-        setError((e as Error).message);
-        if ((e as Error).message === "Bug report not found") return;
+        const message = (e as Error).message;
+        // A brand-new run can briefly 404; say so (and stop) only once it persists.
+        if (message !== "Bug report not found") setError(message);
+        else if (++misses >= NOT_FOUND_POLLS) return setError(message);
       }
       timer = setTimeout(poll, POLL_MS);
     };
@@ -207,7 +218,12 @@ export function BugReportCard({ instanceId }: { instanceId: string }) {
 
       <CardFooter className="flex-col items-start gap-2 px-4">
         {status?.result && <Outcome result={status.result} />}
-        {status?.status === "errored" && <p className="text-sm text-destructive">{status.error}</p>}
+        {status?.status === "errored" && (
+          <p className="text-sm text-destructive">
+            {failedStep(status) ? `Failed at “${failedStep(status)}”. ` : ""}
+            {status.error}
+          </p>
+        )}
         {waiting && (
           <div className="flex gap-2">
             <Button size="sm" disabled={sending} onClick={() => decide("approve")}>

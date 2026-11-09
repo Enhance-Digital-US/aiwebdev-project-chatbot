@@ -85,6 +85,7 @@ Current servers: `cf-docs` (Cloudflare Docs), `deepwiki` (DeepWiki), `issue-trac
 - **Requests:** send `resource` (RFC 8707) = `ISSUE_TRACKER_URL`, or the tracker refuses the token.
 - **Tokens:** stored in D1 (`issue_tracker_tokens`), AES-GCM encrypted with `TOKEN_ENCRYPTION_KEY` and bound to the owner (the same owner as saved chats, `local` in development). Refreshed when expired. A refused refresh first re-reads the row, in case a concurrent request rotated it, then deletes it.
 - **Not connected:** the chat route leaves out `fileBugReport`, and the system prompt tells the model to offer the `/oauth/connect` link.
+- **Unreachable:** connected, but the tracker's tools didn't load on this request (`issueTrackerLoaded` in `tools/file-bug-report.ts`). The route also leaves out `fileBugReport`, so no run starts that would fail at `dedupe`, and the system prompt tells the model the tracker is temporarily unavailable.
 - **Links:** in-app links in answers open in a new tab without Streamdown's external-link prompt (`message.tsx`).
 - **Paths:** the routes sit outside `/api` so the client metadata path can get its own Access bypass.
 

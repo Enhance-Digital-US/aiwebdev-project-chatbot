@@ -66,7 +66,7 @@ Lessons 13–20 also name an mcp-server tag (`lesson-13` until lesson 16, then `
 - **Boundary decisions:**
   - Access identity (`auth/access.ts`, `jose`), the custom domain and the deploy scripts arrive at 19, per the feature map. Before 19 the middleware sets `userId` to `null`, so lesson 11's traces carry sessions but not users until 19.
   - `ISSUE_TRACKER_URL` and `getMcpServers(env)` arrive with MCP at 13, not with the workflow at 16 as in `main`'s history.
-  - The Team Assistant persona text (and the empty-state copy from 10) lists all four abilities from 09, as written in history; prompt versions are `@1` at 09–12, `@2` at 13–17, `@3` at 18 and `@4` at 19.
+  - The Team Assistant persona text (and the empty-state copy from 10) lists all four abilities from 09, as written in history; prompt versions are `@1` at 09–12, `@2` at 13–17, `@3` at 18 and `@5` at 19 (it was `@4` until the tracker-unreachable rule was rebuilt into 19).
   - Lesson 04's chat page (plain list and form) and lesson 03's scaffold page are new code; `main` never had them. Lesson 05 brings in AI Elements.
   - Lesson 07's model picker offers one model (GPT-6 Luna); Ollama joins at 08.
   - The deployed D1 `database_id` arrives at 19, the first deploy; lesson 16 binds the database without one (local dev needs none).
